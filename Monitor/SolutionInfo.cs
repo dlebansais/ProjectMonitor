@@ -1,45 +1,25 @@
 ﻿namespace Monitor
 {
-    using Octokit;
-    using System;
-    using System.Collections.ObjectModel;
+    using SlnExplorer;
+    using System.Collections.Generic;
     using System.ComponentModel;
     using System.Diagnostics.CodeAnalysis;
     using System.Runtime.CompilerServices;
 
-    public class RepositoryInfo : IStatusInfo, INotifyPropertyChanged
+    public class SolutionInfo : IStatusInfo, INotifyPropertyChanged
     {
-        public RepositoryInfo(IStatusInfoCollection ownerCollection, Repository repository)
+        public SolutionInfo(IStatusInfoCollection ownerCollection, Solution solution, List<Project> projectList)
         {
             OwnerCollection = ownerCollection;
-            Source = repository;
+            Source = solution;
+            ProjectList = projectList;
             IsValid = true;
         }
 
         public IStatusInfoCollection OwnerCollection { get; }
-        public Repository Source { get; }
-
-        public bool Private { get { return Source.Private; } }
-        public string Owner { get { return Source.Owner.Login; } }
-        public string Name { get { return Source.Name; } }
-        public long Id { get { return Source.Id; } }
-        public ObservableCollection<BranchInfo> BranchList { get; } = new ObservableCollection<BranchInfo>();
-        public BranchInfo MasterBranch { get; private set; } = null!;
-        public GitReference MasterCommit { get; private set; } = new();
+        public Solution Source { get; }
+        public List<Project> ProjectList { get; }
         public bool IsValid { get; private set; }
-
-        public void CheckMasterBranch()
-        {
-            foreach (BranchInfo Branch in BranchList)
-                if (Branch.Name == "master")
-                {
-                    MasterBranch = Branch;
-                    MasterCommit = MasterBranch.Commit;
-                    NotifyPropertyChanged(nameof(MasterBranch));
-                    NotifyPropertyChanged(nameof(MasterCommit));
-                    break;
-                }
-        }
 
         public void Invalidate()
         {

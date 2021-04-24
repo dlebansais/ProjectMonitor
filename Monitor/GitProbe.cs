@@ -1,48 +1,57 @@
 ﻿namespace Monitor
 {
-    using SlnExplorer;
-    using System.Collections.Generic;
+    using System;
     using System.Threading.Tasks;
 
     public partial class GitProbe
     {
         #region Init
-        public GitProbe(string owner, ICollection<RepositoryInfo> repositoryList, ICollection<Solution> solutionList, Dictionary<Solution, List<Project>> projectTable)
+        public GitProbe(string owner, RepositoryInfoCollection repositoryList, SolutionInfoCollection solutionList, ProjectInfoCollection projectList)
         {
             Owner = owner;
             RepositoryList = repositoryList;
             SolutionList = solutionList;
-            ProjectTable = projectTable;
+            ProjectList = projectList;
         }
         #endregion
 
         #region Properties
         public string ApplicationName { get; } = "Repo-Inspector";
         public string Owner { get; }
-        public ICollection<RepositoryInfo> RepositoryList { get; }
-        public ICollection<Solution> SolutionList { get; }
-        public Dictionary<Solution, List<Project>> ProjectTable { get; }
+        public bool IsConnected { get; private set; }
+        public RepositoryInfoCollection RepositoryList { get; }
+        public SolutionInfoCollection SolutionList { get; }
+        public ProjectInfoCollection ProjectList { get; }
         #endregion
 
         #region Client Interface
-        public async Task<bool> Start()
+        public async Task Start()
         {
-            bool IsConnected = await Init();
+            IsConnected = await Init();
+            NotifyConnected();
+
             if (!IsConnected)
-                return false;
+                return;
 
             await EnumerateRepositories();
             await EnumerateBranches();
             await EnumerateSolutions();
-
-            return true;
         }
 
         public void Stop()
         {
             RepositoryList.Clear();
             SolutionList.Clear();
-            ProjectTable.Clear();
+            ProjectList.Clear();
+        }
+        #endregion
+
+        #region Events
+        public event EventHandler? Connected;
+
+        protected void NotifyConnected()
+        {
+            Connected?.Invoke(this, EventArgs.Empty);
         }
         #endregion
     }

@@ -1,45 +1,22 @@
 ﻿namespace Monitor
 {
-    using Octokit;
-    using System;
-    using System.Collections.ObjectModel;
+    using SlnExplorer;
     using System.ComponentModel;
     using System.Diagnostics.CodeAnalysis;
     using System.Runtime.CompilerServices;
 
-    public class RepositoryInfo : IStatusInfo, INotifyPropertyChanged
+    public class ProjectInfo : IStatusInfo, INotifyPropertyChanged
     {
-        public RepositoryInfo(IStatusInfoCollection ownerCollection, Repository repository)
+        public ProjectInfo(IStatusInfoCollection ownerCollection, Project project)
         {
             OwnerCollection = ownerCollection;
-            Source = repository;
+            Source = project;
             IsValid = true;
         }
 
         public IStatusInfoCollection OwnerCollection { get; }
-        public Repository Source { get; }
-
-        public bool Private { get { return Source.Private; } }
-        public string Owner { get { return Source.Owner.Login; } }
-        public string Name { get { return Source.Name; } }
-        public long Id { get { return Source.Id; } }
-        public ObservableCollection<BranchInfo> BranchList { get; } = new ObservableCollection<BranchInfo>();
-        public BranchInfo MasterBranch { get; private set; } = null!;
-        public GitReference MasterCommit { get; private set; } = new();
+        public Project Source { get; }
         public bool IsValid { get; private set; }
-
-        public void CheckMasterBranch()
-        {
-            foreach (BranchInfo Branch in BranchList)
-                if (Branch.Name == "master")
-                {
-                    MasterBranch = Branch;
-                    MasterCommit = MasterBranch.Commit;
-                    NotifyPropertyChanged(nameof(MasterBranch));
-                    NotifyPropertyChanged(nameof(MasterCommit));
-                    break;
-                }
-        }
 
         public void Invalidate()
         {

@@ -33,19 +33,13 @@
         public async Task Validate()
         {
             foreach (RepositoryInfo Item in GitProbe.RepositoryList)
-            {
-                Thread.Sleep(TimeSpan.FromSeconds(5));
                 await ValidateRepository(Item);
-            }
         }
 
         public async Task ValidateRepository(RepositoryInfo repository)
         {
             foreach (MandatoryFile Item in MandatoryFileList)
-            {
-                Thread.Sleep(TimeSpan.FromSeconds(5));
                 await ValidateMandatoryFile(repository, Item);
-            }
         }
 
         public async Task ValidateMandatoryFile(RepositoryInfo repository, MandatoryFile mandatoryFile)
@@ -66,17 +60,36 @@
             }
 
             if (Content == null)
+            {
+                repository.Invalidate();
                 MissingFileList.Add(mandatoryFile);
+            }
             else if (!IsContentEqual(Content, mandatoryFile.Content))
+            {
+                repository.Invalidate();
                 InvalidFileList.Add(mandatoryFile);
+            }
         }
 
         private static bool IsContentEqual(byte[] content1, byte[] content2)
         {
-            ReadOnlySpan<byte> Span1 = new(content1);
-            ReadOnlySpan<byte> Span2 = new(content2);
+            int i1, i2;
+            for (i1 = 0, i2 = 0; i1 < content1.Length && i2 < content2.Length; i1++, i2++)
+            {
+                byte c1 = content1[i1];
+                byte c2 = content2[i2];
 
-            return Span1.SequenceEqual(Span2);
+                if (c1 == 0x0D && i1 + 1 < content1.Length)
+                    c1 = content1[++i1];
+
+                if (c2 == 0x0D && i2 + 1 < content2.Length)
+                    c2 = content2[++i2];
+
+                if (c1 != c2)
+                    return false;
+            }
+
+            return true;
         }
     }
 }

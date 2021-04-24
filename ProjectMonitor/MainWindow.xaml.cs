@@ -1,14 +1,12 @@
 ﻿namespace Monitor
 {
-    using SlnExplorer;
-    using System.Collections.Generic;
-    using System.Collections.ObjectModel;
+    using System;
     using System.ComponentModel;
+    using System.Diagnostics.CodeAnalysis;
     using System.IO;
     using System.Reflection;
-    using System.Windows;
     using System.Runtime.CompilerServices;
-    using System.Diagnostics.CodeAnalysis;
+    using System.Windows;
 
     public partial class MainWindow : Window, INotifyPropertyChanged
     {
@@ -18,8 +16,12 @@
             DataContext = this;
 
             IsBusy = true;
-            GitProbe = new GitProbe(UserLoginName, RepositoryList, SolutionList, ProjectTable);
+            GitProbe = new GitProbe(UserLoginName, RepositoryList, SolutionList, ProjectList);
             Validation = new(GitProbe);
+
+            circleRepository.Source = RepositoryList;
+            circleSolution.Source = SolutionList;
+            circleProject.Source = ProjectList;
 
             InitValidation();
 
@@ -28,22 +30,33 @@
 
         public string UserLoginName { get; } = "dlebansais";
         public bool IsBusy { get; private set; }
-        public bool IsConnected { get; private set; }
-        public ObservableCollection<RepositoryInfo> RepositoryList { get; } = new();
-        public ObservableCollection<Solution> SolutionList { get; } = new();
-        public Dictionary<Solution, List<Project>> ProjectTable { get; } = new();
+        public bool IsConnected { get { return GitProbe.IsConnected; } }
+        public RepositoryInfoCollection RepositoryList { get; } = new();
+        public SolutionInfoCollection SolutionList { get; } = new();
+        public ProjectInfoCollection ProjectList { get; } = new();
 
         private async void OnLoaded(object sender, RoutedEventArgs e)
         {
-            IsConnected = await GitProbe.Start();
-            if (IsConnected)
+            /*if (!IsConnected)
             {
-                NotifyPropertyChanged(nameof(IsConnected));
-                await Validation.Validate();
-            }
+                IsConnected = true;
+                IsBusy = false;
+                NotifyPropertyChanged(nameof(IsBusy));
+                return;
+            }*/
 
+            GitProbe.Connected += OnConnected;
+
+            await GitProbe.Start();
+            if (IsConnected)
+                await Validation.Validate();
+        }
+
+        private void OnConnected(object sender, EventArgs args)
+        {
             IsBusy = false;
             NotifyPropertyChanged(nameof(IsBusy));
+            NotifyPropertyChanged(nameof(IsConnected));
         }
 
         private void InitValidation()

@@ -45,7 +45,7 @@
 
             foreach (Repository Repository in Result.Items)
             {
-                RepositoryList.Add(new RepositoryInfo(Repository));
+                RepositoryList.Add(new RepositoryInfo(RepositoryList, Repository));
                 if (RepositoryList.Count > 2)
                     break;
             }
@@ -77,21 +77,26 @@
                     if (Entry.Value != null)
                     {
                         using StreamReader Reader = new(Entry.Value, Encoding.UTF8);
-                        SlnExplorer.Solution NewSolution = new(Entry.Key, Reader);
+                        SlnExplorer.Solution Solution = new(Entry.Key, Reader);
                         List<SlnExplorer.Project> LoadedProjectList = new();
 
-                        foreach (SlnExplorer.Project ProjectItem in NewSolution.ProjectList)
+                        foreach (SlnExplorer.Project ProjectItem in Solution.ProjectList)
                         {
                             bool IsIgnored = ProjectItem.ProjectType != "Unknown" && ProjectItem.ProjectType != "KnownToBeMSBuildFormat";
 
                             if (!IsIgnored)
+                            {
+                                ProjectInfo NewProject = new(ProjectList, ProjectItem);
+                                ProjectList.Add(NewProject);
+
                                 LoadedProjectList.Add(ProjectItem);
+                            }
                         }
 
                         if (LoadedProjectList.Count > 0)
                         {
+                            SolutionInfo NewSolution = new(SolutionList, Solution, LoadedProjectList);
                             SolutionList.Add(NewSolution);
-                            ProjectTable.Add(NewSolution, LoadedProjectList);
                         }
                     }
             }
@@ -121,7 +126,6 @@
                 string ReplacePattern = $"raw.githubusercontent.com/{repository.Owner}/{repository.Name}";
                 Url = Url.Replace(SearchPattern, ReplacePattern);
 
-                Thread.Sleep(TimeSpan.FromSeconds(0.5));
                 Stream? Stream = await HttpHelper.Download(Url);
 
                 Result.Add(ActualFileName, Stream);

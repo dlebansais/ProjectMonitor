@@ -1,6 +1,7 @@
 ﻿<Window x:Class="Monitor.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:ProjectMonitor"
         xmlns:ctrl="clr-namespace:CustomControls"
         xmlns:conv="clr-namespace:Converters;assembly=XamlConverterLibrary"
         Title="Main Window"
@@ -27,7 +28,7 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="40"/>
                     <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="40"/>
+                    <ColumnDefinition Width="200"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0" Grid.Row="0" TextAlignment="Right" Margin="0,0,0,0">Private:</TextBlock>
                 <TextBlock Grid.Column="1" Grid.Row="0" Text="{Binding Private}" Margin="5,0,0,0"/>
@@ -49,6 +50,16 @@
                     <TextBlock DockPanel.Dock="Right" Text="{Binding RepositoryList.Count}" Margin="5,0,0,0"/>
                     <TextBlock DockPanel.Dock="Right" Margin="5,0,0,0">Public Repositories:</TextBlock>
                 </DockPanel>
+                <Grid DockPanel.Dock="Top">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition/>
+                        <ColumnDefinition/>
+                        <ColumnDefinition/>
+                    </Grid.ColumnDefinitions>
+                    <local:StatusCircleControl x:Name="circleRepository" Grid.Column="0"/>
+                    <local:StatusCircleControl x:Name="circleSolution" Grid.Column="1"/>
+                    <local:StatusCircleControl x:Name="circleProject" Grid.Column="2"/>
+                </Grid>
                 <ScrollViewer Margin="0,10,0,0">
                     <ItemsControl ItemsSource="{Binding RepositoryList}" ItemTemplate="{StaticResource RepositoryTemplate}"/>
                 </ScrollViewer>
