@@ -1,0 +1,30 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31129.286
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ProjectMonitor", "ProjectMonitor\ProjectMonitor.csproj", "{0F2CF85F-DF99-46A8-8079-A1CF6773DBC8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Monitor", "Monitor\Monitor.csproj", "{A76A208D-3A54-462E-93F0-BB954EEFACD5}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{0F2CF85F-DF99-46A8-8079-A1CF6773DBC8}.Debug|x64.ActiveCfg = Debug|x64
+		{0F2CF85F-DF99-46A8-8079-A1CF6773DBC8}.Debug|x64.Build.0 = Debug|x64
+		{0F2CF85F-DF99-46A8-8079-A1CF6773DBC8}.Release|x64.ActiveCfg = Release|x64
+		{0F2CF85F-DF99-46A8-8079-A1CF6773DBC8}.Release|x64.Build.0 = Release|x64
+		{A76A208D-3A54-462E-93F0-BB954EEFACD5}.Debug|x64.ActiveCfg = Debug|x64
+		{A76A208D-3A54-462E-93F0-BB954EEFACD5}.Debug|x64.Build.0 = Debug|x64
+		{A76A208D-3A54-462E-93F0-BB954EEFACD5}.Release|x64.ActiveCfg = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {72835759-DE25-4CBF-BAA5-3E8D244D7D2C}
+	EndGlobalSection
+EndGlobal

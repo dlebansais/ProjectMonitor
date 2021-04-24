@@ -1,0 +1,34 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <Platforms>x64</Platforms>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="..\signfile.bat" />
+    <None Remove="..\updatecommit.bat" />
+    <None Remove="..\updateversion.bat" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="..\signfile.bat" />
+    <EmbeddedResource Include="..\updatecommit.bat" />
+    <EmbeddedResource Include="..\updateversion.bat" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Octokit" Version="0.50.0" />
+    <PackageReference Include="XamlConverterLibrary-Debug" Version="1.0.3" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
+    <PackageReference Include="XamlConverterLibrary" Version="1.0.3" Condition="'$(Configuration)|$(Platform)'!='Debug|x64'" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Monitor\Monitor.csproj" />
+  </ItemGroup>
+
+</Project>

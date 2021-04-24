@@ -1,0 +1,64 @@
+﻿<Window x:Class="Monitor.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ctrl="clr-namespace:CustomControls"
+        xmlns:conv="clr-namespace:Converters;assembly=XamlConverterLibrary"
+        Title="Main Window"
+        ResizeMode="CanResize"
+        WindowStartupLocation="CenterOwner"
+        SizeToContent="WidthAndHeight">
+    <Window.Resources>
+        <conv:BooleanToObjectConverter x:Key="convBooleanToObject"/>
+        <CompositeCollection x:Key="CollapsedVisible">
+            <Visibility>Collapsed</Visibility>
+            <Visibility>Visible</Visibility>
+        </CompositeCollection>
+        <CompositeCollection x:Key="VisibleCollapsed">
+            <Visibility>Visible</Visibility>
+            <Visibility>Collapsed</Visibility>
+        </CompositeCollection>
+        <DataTemplate x:Key="RepositoryTemplate">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="40"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="200"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="40"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="40"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Grid.Row="0" TextAlignment="Right" Margin="0,0,0,0">Private:</TextBlock>
+                <TextBlock Grid.Column="1" Grid.Row="0" Text="{Binding Private}" Margin="5,0,0,0"/>
+                <TextBlock Grid.Column="2" Grid.Row="0" TextAlignment="Right" Margin="10,0,0,0">Name:</TextBlock>
+                <TextBlock Grid.Column="3" Grid.Row="0" Text="{Binding Name}" Margin="5,0,0,0"/>
+                <TextBlock Grid.Column="4" Grid.Row="0" TextAlignment="Right" Margin="10,0,0,0">Branches:</TextBlock>
+                <TextBlock Grid.Column="5" Grid.Row="0" Text="{Binding BranchList.Count}" Margin="5,0,0,0"/>
+                <TextBlock Grid.Column="6" Grid.Row="0" TextAlignment="Right" Margin="10,0,0,0">Master:</TextBlock>
+                <TextBlock Grid.Column="7" Grid.Row="0" Text="{Binding MasterCommit.Sha}" Margin="5,0,0,0"/>
+            </Grid>
+        </DataTemplate>
+    </Window.Resources>
+    <Grid>
+        <Grid Visibility="{Binding IsBusy, Converter={StaticResource convBooleanToObject}, ConverterParameter={StaticResource VisibleCollapsed}}" Margin="10,10,10,10">
+            <DockPanel Visibility="{Binding IsConnected, Converter={StaticResource convBooleanToObject}, ConverterParameter={StaticResource CollapsedVisible}}">
+                <DockPanel DockPanel.Dock="Top" LastChildFill="False">
+                    <TextBlock DockPanel.Dock="Left">Name:</TextBlock>
+                    <TextBlock DockPanel.Dock="Left" Text="{Binding UserLoginName}" Margin="5,0,0,0"/>
+                    <TextBlock DockPanel.Dock="Right" Text="{Binding RepositoryList.Count}" Margin="5,0,0,0"/>
+                    <TextBlock DockPanel.Dock="Right" Margin="5,0,0,0">Public Repositories:</TextBlock>
+                </DockPanel>
+                <ScrollViewer Margin="0,10,0,0">
+                    <ItemsControl ItemsSource="{Binding RepositoryList}" ItemTemplate="{StaticResource RepositoryTemplate}"/>
+                </ScrollViewer>
+            </DockPanel>
+            <Grid Visibility="{Binding IsConnected, Converter={StaticResource convBooleanToObject}, ConverterParameter={StaticResource VisibleCollapsed}}">
+                <TextBlock FontSize="32" FontWeight="Bold" Foreground="Red" HorizontalAlignment="Center" VerticalAlignment="Center">Failed to connect</TextBlock>
+            </Grid>
+        </Grid>
+        <Grid Visibility="{Binding IsBusy, Converter={StaticResource convBooleanToObject}, ConverterParameter={StaticResource CollapsedVisible}}">
+            <ctrl:BusyIndicator HorizontalAlignment="Center" VerticalAlignment="Center" Width="64" Height="64"/>
+        </Grid>
+    </Grid>
+</Window>
