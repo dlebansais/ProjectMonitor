@@ -81,6 +81,7 @@
             Validation.AddMandatoryIgnoreLine("/nuget");
             Validation.AddMandatoryIgnoreLine("/nuget-debug");
             Validation.AddMandatoryDependentProject("PreBuild");
+            Validation.AddForbiddenProjectFile("packages.config");
 
             byte[] AppVeyorContentExe = LoadResourceFile("Resources.exe.appveyor.yml");
             byte[] AppVeyorContentLibrary = LoadResourceFile("Resources.dll.appveyor.yml");

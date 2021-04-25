@@ -15,40 +15,47 @@
         }
 
         public GitProbe GitProbe { get; }
-        public List<MandatoryRepositoryFile> MandatoryRepositoryFileList { get; } = new();
-        public List<MandatoryProjectFile> MandatoryProjectFileList { get; } = new();
-        public List<MandatoryIgnoreLine> MandatoryIgnoreLineList { get; } = new();
-        public List<MandatoryDependentProject> MandatoryDependentProjectList { get; } = new();
-        public List<MandatoryContinuousIntegration> MandatoryContinuousIntegrationList { get; } = new();
+        public List<RepositoryFile> MandatoryRepositoryFileList { get; } = new();
+        public List<RepositoryFile> MandatoryProjectFileList { get; } = new();
+        public List<RepositoryFile> ForbiddenProjectFileList { get; } = new();
+        public List<IgnoreLine> MandatoryIgnoreLineList { get; } = new();
+        public List<DependentProject> MandatoryDependentProjectList { get; } = new();
+        public List<ContinuousIntegration> MandatoryContinuousIntegrationList { get; } = new();
         public List<string> ErrorList { get; } = new();
 
         public void AddMandatoryRepositoryFile(string fileName, byte[] content)
         {
-            MandatoryRepositoryFile NewMandatoryFile = new(fileName, content);
+            RepositoryFile NewMandatoryFile = new(fileName, content);
             MandatoryRepositoryFileList.Add(NewMandatoryFile);
         }
 
-        public void AddMandatoryProjectFile(string projectName, string fileName, byte[] content)
+        public void AddMandatoryProjectFile(string fileName, byte[] content)
         {
-            MandatoryProjectFile NewMandatoryFile = new(projectName, fileName, content);
+            RepositoryFile NewMandatoryFile = new(fileName, content);
             MandatoryProjectFileList.Add(NewMandatoryFile);
+        }
+
+        public void AddForbiddenProjectFile(string fileName)
+        {
+            RepositoryFile NewForbiddenFile = new(fileName, new byte[0]);
+            ForbiddenProjectFileList.Add(NewForbiddenFile);
         }
 
         public void AddMandatoryIgnoreLine(string line)
         {
-            MandatoryIgnoreLine NewMandatoryIgnoreLine = new(line);
+            IgnoreLine NewMandatoryIgnoreLine = new(line);
             MandatoryIgnoreLineList.Add(NewMandatoryIgnoreLine);
         }
 
         public void AddMandatoryDependentProject(string projectName)
         {
-            MandatoryDependentProject NewMandatoryDependentProject = new(projectName);
+            DependentProject NewMandatoryDependentProject = new(projectName);
             MandatoryDependentProjectList.Add(NewMandatoryDependentProject);
         }
 
         public void AddMandatoryContinuousIntegration(byte[] contentExe, byte[] contentLibrary)
         {
-            MandatoryContinuousIntegration NewMandatoryContinuousIntegration = new(contentExe, contentLibrary);
+            ContinuousIntegration NewMandatoryContinuousIntegration = new(contentExe, contentLibrary);
             MandatoryContinuousIntegrationList.Add(NewMandatoryContinuousIntegration);
         }
 
@@ -63,9 +70,9 @@
 
         public async Task ValidateRepository(RepositoryInfo repository)
         {
-            foreach (MandatoryFile Item in MandatoryRepositoryFileList)
+            foreach (RepositoryFile Item in MandatoryRepositoryFileList)
             {
-                bool IsValid = await ValidateMandatoryFile(repository, Item);
+                bool IsValid = await ValidateMandatoryFile(repository, "/", Item);
                 if (!IsValid)
                     repository.Invalidate();
             }
@@ -73,7 +80,7 @@
             if (!repository.IsMainProjectExe)
                 await CheckMandatoryIgnoreLine(repository);
 
-            foreach (MandatoryContinuousIntegration Item in MandatoryContinuousIntegrationList)
+            foreach (ContinuousIntegration Item in MandatoryContinuousIntegrationList)
             {
                 bool IsValid = await ValidateMandatoryContinuousIntegration(repository, Item);
                 if (!IsValid)
@@ -109,7 +116,7 @@
             string[] Lines = StringContent.Split('\x0A');
 
             List<string> LineToCheckList = new();
-            foreach (MandatoryIgnoreLine Item in MandatoryIgnoreLineList)
+            foreach (IgnoreLine Item in MandatoryIgnoreLineList)
                 LineToCheckList.Add(Item.Line);
 
             foreach (string Item in Lines)
@@ -133,48 +140,74 @@
 
         public async Task ValidateSolution(SolutionInfo solution)
         {
-            foreach (MandatoryFile Item in MandatoryProjectFileList)
-            {
-                bool IsValid = await ValidateMandatoryFile(solution.Repository, Item);
-                if (!IsValid)
-                    solution.Invalidate();
-            }
-
-            foreach (MandatoryDependentProject Item in MandatoryDependentProjectList)
+            foreach (DependentProject Item in MandatoryDependentProjectList)
             {
                 bool IsValid = ValidateMandatoryDependentProject(solution, Item);
                 if (!IsValid)
                     solution.Invalidate();
             }
+
+            foreach (ProjectInfo Project in solution.ProjectList)
+            {
+                string ProjectPath = Path.GetDirectoryName(Project.RelativePath);
+                ProjectPath = $"/{ProjectPath}/";
+
+                foreach (RepositoryFile Item in MandatoryProjectFileList)
+                {
+                    bool IsValid = await ValidateMandatoryFile(solution.Repository, ProjectPath, Item);
+                    if (!IsValid)
+                        solution.Invalidate();
+                }
+
+                foreach (RepositoryFile Item in ForbiddenProjectFileList)
+                {
+                    bool IsValid = await ValidateForbiddenFile(solution.Repository, ProjectPath, Item);
+                    if (!IsValid)
+                        solution.Invalidate();
+                }
+            }
         }
 
-        public async Task<bool> ValidateMandatoryFile(RepositoryInfo repository, MandatoryFile mandatoryFile)
+        public async Task<bool> ValidateMandatoryFile(RepositoryInfo repository, string path, RepositoryFile mandatoryFile)
         {
-            return await ValidateMandatoryContent(repository, mandatoryFile.RootPath, mandatoryFile.FileName, mandatoryFile.Content);
+            return await ValidateContent(repository, path, mandatoryFile.FileName, mandatoryFile.Content, isMandatory: true);
         }
 
-        public async Task<bool> ValidateMandatoryContent(RepositoryInfo repository, string rootPath, string fileName, byte[] mandatoryContent)
+        public async Task<bool> ValidateForbiddenFile(RepositoryInfo repository, string path, RepositoryFile mandatoryFile)
+        {
+            return await ValidateContent(repository, path, mandatoryFile.FileName, mandatoryFile.Content, isMandatory: false);
+        }
+
+        public async Task<bool> ValidateContent(RepositoryInfo repository, string rootPath, string fileName, byte[] mandatoryContent, bool isMandatory)
         {
             Dictionary<string, Stream?> DownloadResultTable = await GitProbe.DownloadRepositoryFile(repository, rootPath, fileName);
-            byte[]? Content;
+            byte[]? Content = null;
 
-            KeyValuePair<string, Stream?> Entry = DownloadResultTable.First();
-            Stream? DownloadStream = Entry.Value;
-
-            if (DownloadStream != null)
+            if (DownloadResultTable.Count > 0)
             {
-                using BinaryReader Reader = new(DownloadStream);
-                Content = Reader.ReadBytes((int)DownloadStream.Length);
+                KeyValuePair<string, Stream?> Entry = DownloadResultTable.First();
+                Stream? DownloadStream = Entry.Value;
+
+                if (DownloadStream != null)
+                {
+                    using BinaryReader Reader = new(DownloadStream);
+                    Content = Reader.ReadBytes((int)DownloadStream.Length);
+                }
             }
-            else
-                Content = null;
 
             string ErrorText;
 
-            if (Content == null)
-                ErrorText = $"In repo {repository.Name}, file {fileName} is missing";
-            else if (!IsContentEqual(Content, mandatoryContent))
-                ErrorText = $"In repo {repository.Name}, file {fileName} is has invalid content";
+            if (isMandatory)
+            {
+                if (Content == null)
+                    ErrorText = $"In repo {repository.Name}, file {fileName} is missing";
+                else if (!IsContentEqual(Content, mandatoryContent))
+                    ErrorText = $"In repo {repository.Name}, file {fileName} is has invalid content";
+                else
+                    ErrorText = string.Empty;
+            }
+            else if (Content != null)
+                ErrorText = $"In repo {repository.Name}, file {fileName} is present";
             else
                 ErrorText = string.Empty;
 
@@ -187,7 +220,7 @@
                 return true;
         }
 
-        public bool ValidateMandatoryDependentProject(SolutionInfo solution, MandatoryDependentProject mandatoryDependentProject)
+        public bool ValidateMandatoryDependentProject(SolutionInfo solution, DependentProject mandatoryDependentProject)
         {
             string MandatoryProjectName = mandatoryDependentProject.ProjectName;
 
@@ -216,12 +249,12 @@
             return IsDependent;
         }
 
-        public async Task<bool> ValidateMandatoryContinuousIntegration(RepositoryInfo repository, MandatoryContinuousIntegration mandatoryContinuousIntegration)
+        public async Task<bool> ValidateMandatoryContinuousIntegration(RepositoryInfo repository, ContinuousIntegration mandatoryContinuousIntegration)
         {
             if (repository.IsMainProjectExe)
-                return await ValidateMandatoryContent(repository, "/", "appveyor.yml", mandatoryContinuousIntegration.ContentExe);
+                return await ValidateContent(repository, "/", "appveyor.yml", mandatoryContinuousIntegration.ContentExe, isMandatory: true);
             else
-                return await ValidateMandatoryContent(repository, "/", "appveyor.yml", mandatoryContinuousIntegration.ContentLibrary);
+                return await ValidateContent(repository, "/", "appveyor.yml", mandatoryContinuousIntegration.ContentLibrary, isMandatory: true);
         }
 
         private static bool IsContentEqual(byte[] content1, byte[] content2)

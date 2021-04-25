@@ -1,8 +1,8 @@
 ﻿namespace Monitor
 {
-    public class MandatoryContinuousIntegration
+    public class ContinuousIntegration
     {
-        public MandatoryContinuousIntegration(byte[] contentExe, byte[] contentLibrary)
+        public ContinuousIntegration(byte[] contentExe, byte[] contentLibrary)
         {
             ContentExe = contentExe;
             ContentLibrary = contentLibrary;

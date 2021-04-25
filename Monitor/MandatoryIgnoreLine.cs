@@ -1,8 +1,8 @@
 ﻿namespace Monitor
 {
-    public class MandatoryIgnoreLine
+    public class IgnoreLine
     {
-        public MandatoryIgnoreLine(string line)
+        public IgnoreLine(string line)
         {
             Line = line;
         }

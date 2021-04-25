@@ -1,14 +1,13 @@
 ﻿namespace Monitor
 {
-    public abstract class MandatoryFile
+    public class RepositoryFile
     {
-        public MandatoryFile(string fileName, byte[] content)
+        public RepositoryFile(string fileName, byte[] content)
         {
             FileName = fileName;
             Content = content;
         }
 
-        public abstract string RootPath { get; }
         public string FileName { get; }
         public byte[] Content { get; }
     }

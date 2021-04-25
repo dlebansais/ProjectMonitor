@@ -1,8 +1,8 @@
 ﻿namespace Monitor
 {
-    public class MandatoryDependentProject
+    public class DependentProject
     {
-        public MandatoryDependentProject(string projectName)
+        public DependentProject(string projectName)
         {
             ProjectName = projectName;
         }
