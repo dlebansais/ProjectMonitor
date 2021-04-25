@@ -1,6 +1,7 @@
 ﻿namespace Monitor
 {
     using System;
+    using System.Collections.Generic;
     using System.ComponentModel;
     using System.Diagnostics.CodeAnalysis;
     using System.IO;
@@ -61,14 +62,22 @@
 
         private void InitValidation()
         {
-            byte[] SignFileContent = LoadResourceFile(SignFileName);
-            Validation.AddMandatorySolutionFile(SignFileName, SignFileContent);
+            List<string> MandatorySolutionList = new()
+            {
+                "signfile.bat",
+                "updatecommit.bat",
+                "updateversion.bat",
+                ".editorconfig",
+            };
 
-            byte[] UpdateCommitContent = LoadResourceFile(UpdateCommitName);
-            Validation.AddMandatorySolutionFile(UpdateCommitName, UpdateCommitContent);
+            foreach (string MandatoryFileName in MandatorySolutionList)
+            {
+                byte[] FileContent = LoadResourceFile(MandatoryFileName);
+                Validation.AddMandatoryRepositoryFile(MandatoryFileName, FileContent);
+            }
 
-            byte[] UpdateVersionContent = LoadResourceFile(UpdateVersionName);
-            Validation.AddMandatorySolutionFile(UpdateVersionName, UpdateVersionContent);
+            Validation.AddMandatoryIgnoreLine("/nuget");
+            Validation.AddMandatoryIgnoreLine("/nuget-debug");
         }
 
         private byte[] LoadResourceFile(string fileName)
@@ -78,10 +87,6 @@
             using BinaryReader Reader = new BinaryReader(ResourceStream);
             return Reader.ReadBytes((int)ResourceStream.Length);
         }
-
-        private const string SignFileName = "signfile.bat";
-        private const string UpdateCommitName = "updatecommit.bat";
-        private const string UpdateVersionName = "updateversion.bat";
 
         private GitProbe GitProbe;
         private ProjectValidation Validation;

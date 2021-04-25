@@ -3,6 +3,7 @@
     using System;
     using System.Collections.Generic;
     using System.IO;
+    using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
 
@@ -14,61 +15,143 @@
         }
 
         public GitProbe GitProbe { get; }
-        public List<MandatoryFile> MandatoryFileList { get; } = new();
-        public List<MandatoryFile> MissingFileList { get; } = new();
-        public List<MandatoryFile> InvalidFileList { get; } = new();
+        public List<MandatoryRepositoryFile> MandatoryRepositoryFileList { get; } = new();
+        public List<MandatoryProjectFile> MandatoryProjectFileList { get; } = new();
+        public List<MandatoryIgnoreLine> MandatoryIgnoreLineList { get; } = new();
+        public List<string> ErrorList { get; } = new();
 
-        public void AddMandatorySolutionFile(string fileName, byte[] content)
+        public void AddMandatoryRepositoryFile(string fileName, byte[] content)
         {
-            MandatorySolutionFile NewMandatoryFile = new(fileName, content);
-            MandatoryFileList.Add(NewMandatoryFile);
+            MandatoryRepositoryFile NewMandatoryFile = new(fileName, content);
+            MandatoryRepositoryFileList.Add(NewMandatoryFile);
         }
 
         public void AddMandatoryProjectFile(string projectName, string fileName, byte[] content)
         {
             MandatoryProjectFile NewMandatoryFile = new(projectName, fileName, content);
-            MandatoryFileList.Add(NewMandatoryFile);
+            MandatoryProjectFileList.Add(NewMandatoryFile);
+        }
+
+        public void AddMandatoryIgnoreLine(string line)
+        {
+            MandatoryIgnoreLine NewMandatoryIgnoreLine = new(line);
+            MandatoryIgnoreLineList.Add(NewMandatoryIgnoreLine);
         }
 
         public async Task Validate()
         {
             foreach (RepositoryInfo Item in GitProbe.RepositoryList)
                 await ValidateRepository(Item);
+
+            foreach (SolutionInfo Item in GitProbe.SolutionList)
+                await ValidateSolution(Item);
         }
 
         public async Task ValidateRepository(RepositoryInfo repository)
         {
-            foreach (MandatoryFile Item in MandatoryFileList)
-                await ValidateMandatoryFile(repository, Item);
+            foreach (MandatoryFile Item in MandatoryRepositoryFileList)
+            {
+                bool IsValid = await ValidateMandatoryFile(repository, Item);
+                if (!IsValid)
+                    repository.Invalidate();
+            }
+
+            if (!repository.IsMainProjectExe)
+                await CheckMandatoryIgnoreLine(repository);
         }
 
-        public async Task ValidateMandatoryFile(RepositoryInfo repository, MandatoryFile mandatoryFile)
+        public async Task CheckMandatoryIgnoreLine(RepositoryInfo repository)
         {
-            Dictionary<string, Stream?> DownloadResultTable = await GitProbe.DownloadRepositoryFile(repository, mandatoryFile.RootPath, mandatoryFile.FileName);
             byte[]? Content = null;
 
-            foreach (KeyValuePair<string, Stream?> Entry in DownloadResultTable)
+            Dictionary<string, Stream?> DownloadResultTable = await GitProbe.DownloadRepositoryFile(repository, "/", ".gitignore");
+            if (DownloadResultTable.Count > 0)
             {
+                KeyValuePair<string, Stream?> Entry = DownloadResultTable.First();
                 Stream? DownloadStream = Entry.Value;
+
                 if (DownloadStream != null)
                 {
                     using BinaryReader Reader = new(DownloadStream);
                     Content = Reader.ReadBytes((int)DownloadStream.Length);
                 }
-
-                break;
             }
 
             if (Content == null)
             {
                 repository.Invalidate();
-                MissingFileList.Add(mandatoryFile);
+                ErrorList.Add($"repo {repository.Name} is missing a .gitignore");
+                return;
             }
-            else if (!IsContentEqual(Content, mandatoryFile.Content))
+
+            string StringContent = System.Text.Encoding.UTF8.GetString(Content);
+            string[] Lines = StringContent.Split('\x0A');
+
+            List<string> LineToCheckList = new();
+            foreach (MandatoryIgnoreLine Item in MandatoryIgnoreLineList)
+                LineToCheckList.Add(Item.Line);
+
+            foreach (string Item in Lines)
+            {
+                string Line = Item.EndsWith("\x0D") ? Item.Substring(0, Item.Length - 1) : Item;
+
+                foreach (string LineToCheck in LineToCheckList)
+                    if (Line == LineToCheck)
+                    {
+                        LineToCheckList.Remove(LineToCheck);
+                        break;
+                    }
+            }
+
+            if (LineToCheckList.Count > 0)
             {
                 repository.Invalidate();
-                InvalidFileList.Add(mandatoryFile);
+                ErrorList.Add($"repo {repository.Name} is missing {LineToCheckList.Count} lines in .gitignore");
             }
+        }
+
+        public async Task ValidateSolution(SolutionInfo solution)
+        {
+            foreach (MandatoryFile Item in MandatoryProjectFileList)
+            {
+                bool IsValid = await ValidateMandatoryFile(solution.Repository, Item);
+                if (!IsValid)
+                    solution.Invalidate();
+            }
+        }
+
+        public async Task<bool> ValidateMandatoryFile(RepositoryInfo repository, MandatoryFile mandatoryFile)
+        {
+            Dictionary<string, Stream?> DownloadResultTable = await GitProbe.DownloadRepositoryFile(repository, mandatoryFile.RootPath, mandatoryFile.FileName);
+            byte[]? Content;
+
+            KeyValuePair<string, Stream?> Entry = DownloadResultTable.First();
+            Stream? DownloadStream = Entry.Value;
+
+            if (DownloadStream != null)
+            {
+                using BinaryReader Reader = new(DownloadStream);
+                Content = Reader.ReadBytes((int)DownloadStream.Length);
+            }
+            else
+                Content = null;
+
+            string ErrorText;
+
+            if (Content == null)
+                ErrorText = $"In repo {repository.Name}, file {mandatoryFile.FileName} is missing";
+            else if (!IsContentEqual(Content, mandatoryFile.Content))
+                ErrorText = $"In repo {repository.Name}, file {mandatoryFile.FileName} is has invalid content";
+            else
+                ErrorText = string.Empty;
+
+            if (ErrorText.Length > 0)
+            {
+                ErrorList.Add(ErrorText);
+                return false;
+            }
+            else
+                return true;
         }
 
         private static bool IsContentEqual(byte[] content1, byte[] content2)

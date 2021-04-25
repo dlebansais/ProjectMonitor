@@ -1,8 +1,8 @@
 ﻿namespace Monitor
 {
-    public class MandatorySolutionFile : MandatoryFile
+    public class MandatoryRepositoryFile : MandatoryFile
     {
-        public MandatorySolutionFile(string fileName, byte[] content)
+        public MandatoryRepositoryFile(string fileName, byte[] content)
             : base(fileName, content)
         {
         }

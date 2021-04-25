@@ -27,6 +27,7 @@
         public BranchInfo MasterBranch { get; private set; } = null!;
         public GitReference MasterCommit { get; private set; } = new();
         public bool IsValid { get; private set; }
+        public bool IsMainProjectExe { get; set; }
 
         public void CheckMasterBranch()
         {

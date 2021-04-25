@@ -5,6 +5,7 @@
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.IO;
+    using System.Linq;
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
@@ -46,7 +47,7 @@
             foreach (Repository Repository in Result.Items)
             {
                 RepositoryList.Add(new RepositoryInfo(RepositoryList, Repository));
-                if (RepositoryList.Count > 2)
+                if (RepositoryList.Count > 0)
                     break;
             }
         }
@@ -72,6 +73,7 @@
             foreach (RepositoryInfo Repository in RepositoryList)
             {
                 Dictionary<string, Stream?> SolutionStreamTable = await DownloadRepositoryFile(Repository, "/", ".sln");
+                bool IsMainProjectExe = false;
 
                 foreach (KeyValuePair<string, Stream?> Entry in SolutionStreamTable)
                     if (Entry.Value != null)
@@ -82,10 +84,23 @@
 
                         foreach (SlnExplorer.Project ProjectItem in Solution.ProjectList)
                         {
-                            bool IsIgnored = ProjectItem.ProjectType != "Unknown" && ProjectItem.ProjectType != "KnownToBeMSBuildFormat";
+                            bool IsIgnored = ProjectItem.ProjectType > SlnExplorer.ProjectType.KnownToBeMSBuildFormat;
 
                             if (!IsIgnored)
                             {
+                                string RelativePath = Path.GetDirectoryName(ProjectItem.RelativePath).Replace("\\", "/");
+                                string ProjectFileName = Path.GetFileName(ProjectItem.RelativePath);
+
+                                Dictionary<string, Stream?> ProjectStreamTable = await DownloadRepositoryFile(Repository, RelativePath, ProjectFileName);
+                                if (ProjectStreamTable.Count > 0)
+                                {
+                                    KeyValuePair<string, Stream?> StreamEntry = ProjectStreamTable.First();
+                                    Stream? ProjectStream = StreamEntry.Value;
+
+                                    if (ProjectStream != null)
+                                        ProjectItem.LoadDetails(ProjectStream);
+                                }
+
                                 ProjectInfo NewProject = new(ProjectList, ProjectItem);
                                 ProjectList.Add(NewProject);
 
@@ -95,10 +110,14 @@
 
                         if (LoadedProjectList.Count > 0)
                         {
-                            SolutionInfo NewSolution = new(SolutionList, Solution, LoadedProjectList);
+                            SolutionInfo NewSolution = new(SolutionList, Repository, Solution, LoadedProjectList);
                             SolutionList.Add(NewSolution);
+
+                            IsMainProjectExe |= CheckMainProjectExe(NewSolution);
                         }
                     }
+
+                Repository.IsMainProjectExe = IsMainProjectExe;
             }
         }
 
@@ -132,6 +151,16 @@
             }
 
             return Result;
+        }
+
+        private bool CheckMainProjectExe(SolutionInfo solution)
+        {
+            foreach (SlnExplorer.Project Item in solution.ProjectList)
+                if (!Item.RelativePath.StartsWith("Test\\"))
+                    if (Item.ProjectType == SlnExplorer.ProjectType.Console || Item.ProjectType == SlnExplorer.ProjectType.WinExe)
+                        return true;
+
+            return false;
         }
 
         private GitHubClient Client = null!;

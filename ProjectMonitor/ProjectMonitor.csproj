@@ -13,12 +13,14 @@
     <None Remove="..\signfile.bat" />
     <None Remove="..\updatecommit.bat" />
     <None Remove="..\updateversion.bat" />
+    <None Remove="..\.editorconfig" />
   </ItemGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="..\signfile.bat" />
     <EmbeddedResource Include="..\updatecommit.bat" />
     <EmbeddedResource Include="..\updateversion.bat" />
+    <EmbeddedResource Include="..\.editorconfig" />
   </ItemGroup>
 
   <ItemGroup>
