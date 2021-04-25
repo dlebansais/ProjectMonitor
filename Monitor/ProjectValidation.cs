@@ -18,6 +18,7 @@
         public List<MandatoryRepositoryFile> MandatoryRepositoryFileList { get; } = new();
         public List<MandatoryProjectFile> MandatoryProjectFileList { get; } = new();
         public List<MandatoryIgnoreLine> MandatoryIgnoreLineList { get; } = new();
+        public List<MandatoryDependentProject> MandatoryDependentProjectList { get; } = new();
         public List<string> ErrorList { get; } = new();
 
         public void AddMandatoryRepositoryFile(string fileName, byte[] content)
@@ -36,6 +37,12 @@
         {
             MandatoryIgnoreLine NewMandatoryIgnoreLine = new(line);
             MandatoryIgnoreLineList.Add(NewMandatoryIgnoreLine);
+        }
+
+        public void AddMandatoryDependentProject(string projectName)
+        {
+            MandatoryDependentProject NewMandatoryDependentProject = new(projectName);
+            MandatoryDependentProjectList.Add(NewMandatoryDependentProject);
         }
 
         public async Task Validate()
@@ -118,6 +125,13 @@
                 if (!IsValid)
                     solution.Invalidate();
             }
+
+            foreach (MandatoryDependentProject Item in MandatoryDependentProjectList)
+            {
+                bool IsValid = ValidateMandatoryDependentProject(solution, Item);
+                if (!IsValid)
+                    solution.Invalidate();
+            }
         }
 
         public async Task<bool> ValidateMandatoryFile(RepositoryInfo repository, MandatoryFile mandatoryFile)
@@ -154,6 +168,35 @@
                 return true;
         }
 
+        public bool ValidateMandatoryDependentProject(SolutionInfo solution, MandatoryDependentProject mandatoryDependentProject)
+        {
+            string MandatoryProjectName = mandatoryDependentProject.ProjectName;
+
+            ProjectInfo? DependentProject = null;
+            foreach (ProjectInfo Project in solution.ProjectList)
+                if (Project.ProjectName == MandatoryProjectName)
+                {
+                    DependentProject = Project;
+                    break;
+                }
+            if (DependentProject == null)
+            {
+                ErrorList.Add($"Solution {solution.Name} is missing project {MandatoryProjectName}");
+                return false;
+            }
+
+            bool IsDependent = true;
+            foreach (ProjectInfo Project in solution.ProjectList)
+                if (Project.ProjectGuid != DependentProject.ProjectGuid)
+                    if (!IsRecursivelyDependent(Project, DependentProject.ProjectGuid))
+                    {
+                        ErrorList.Add($"In solution {solution.Name} project {Project.ProjectName} should depend on {MandatoryProjectName}");
+                        IsDependent = false;
+                    }
+
+            return IsDependent;
+        }
+
         private static bool IsContentEqual(byte[] content1, byte[] content2)
         {
             int i1, i2;
@@ -173,6 +216,15 @@
             }
 
             return true;
+        }
+
+        private static bool IsRecursivelyDependent(ProjectInfo project, string projectGuid)
+        {
+            foreach (ProjectInfo Item in project.Dependencies)
+                if (Item.ProjectGuid == projectGuid || IsRecursivelyDependent(Item, projectGuid))
+                    return true;
+
+            return false;
         }
     }
 }

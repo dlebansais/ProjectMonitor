@@ -78,6 +78,7 @@
 
             Validation.AddMandatoryIgnoreLine("/nuget");
             Validation.AddMandatoryIgnoreLine("/nuget-debug");
+            Validation.AddMandatoryDependentProject("PreBuild");
         }
 
         private byte[] LoadResourceFile(string fileName)

@@ -1,6 +1,7 @@
 ﻿namespace Monitor
 {
     using SlnExplorer;
+    using System.Collections.Generic;
     using System.ComponentModel;
     using System.Diagnostics.CodeAnalysis;
     using System.Runtime.CompilerServices;
@@ -17,6 +18,11 @@
         public IStatusInfoCollection OwnerCollection { get; }
         public Project Source { get; }
         public bool IsValid { get; private set; }
+        public string ProjectName { get { return Source.ProjectName; } }
+        public string ProjectGuid { get { return Source.ProjectGuid; } }
+        public string RelativePath { get { return Source.RelativePath; } }
+        public ProjectType ProjectType { get { return Source.ProjectType; } }
+        public List<ProjectInfo> Dependencies { get; } = new();
 
         public void Invalidate()
         {

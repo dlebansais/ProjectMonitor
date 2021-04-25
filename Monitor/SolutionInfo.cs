@@ -8,20 +8,37 @@
 
     public class SolutionInfo : IStatusInfo, INotifyPropertyChanged
     {
-        public SolutionInfo(IStatusInfoCollection ownerCollection, RepositoryInfo repository, Solution solution, List<Project> projectList)
+        public SolutionInfo(IStatusInfoCollection ownerCollection, RepositoryInfo repository, Solution solution, List<ProjectInfo> projectList)
         {
             OwnerCollection = ownerCollection;
             Repository = repository;
             Source = solution;
             ProjectList = projectList;
             IsValid = true;
+
+            UpdateProjectDependencies();
+        }
+
+        private void UpdateProjectDependencies()
+        {
+            foreach (ProjectInfo Item in ProjectList)
+                UpdateProjectDependencies(Item);
+        }
+
+        private void UpdateProjectDependencies(ProjectInfo project)
+        {
+            foreach (string ProjectGuid in project.Source.Dependencies)
+                foreach (ProjectInfo Item in ProjectList)
+                    if (Item.ProjectGuid == ProjectGuid)
+                        project.Dependencies.Add(Item);
         }
 
         public IStatusInfoCollection OwnerCollection { get; }
         public RepositoryInfo Repository { get; }
         public Solution Source { get; }
-        public List<Project> ProjectList { get; }
+        public List<ProjectInfo> ProjectList { get; }
         public bool IsValid { get; private set; }
+        public string Name { get { return Source.Name; } }
 
         public void Invalidate()
         {

@@ -80,7 +80,7 @@
                     {
                         using StreamReader Reader = new(Entry.Value, Encoding.UTF8);
                         SlnExplorer.Solution Solution = new(Entry.Key, Reader);
-                        List<SlnExplorer.Project> LoadedProjectList = new();
+                        List<ProjectInfo> LoadedProjectList = new();
 
                         foreach (SlnExplorer.Project ProjectItem in Solution.ProjectList)
                         {
@@ -103,8 +103,7 @@
 
                                 ProjectInfo NewProject = new(ProjectList, ProjectItem);
                                 ProjectList.Add(NewProject);
-
-                                LoadedProjectList.Add(ProjectItem);
+                                LoadedProjectList.Add(NewProject);
                             }
                         }
 
@@ -155,7 +154,7 @@
 
         private bool CheckMainProjectExe(SolutionInfo solution)
         {
-            foreach (SlnExplorer.Project Item in solution.ProjectList)
+            foreach (ProjectInfo Item in solution.ProjectList)
                 if (!Item.RelativePath.StartsWith("Test\\"))
                     if (Item.ProjectType == SlnExplorer.ProjectType.Console || Item.ProjectType == SlnExplorer.ProjectType.WinExe)
                         return true;
