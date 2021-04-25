@@ -79,6 +79,10 @@
             Validation.AddMandatoryIgnoreLine("/nuget");
             Validation.AddMandatoryIgnoreLine("/nuget-debug");
             Validation.AddMandatoryDependentProject("PreBuild");
+
+            byte[] AppVeyorContentExe = LoadResourceFile("Resources.exe.appveyor.yml");
+            byte[] AppVeyorContentLibrary = LoadResourceFile("Resources.dll.appveyor.yml");
+            Validation.AddMandatoryContinuousIntegration(AppVeyorContentExe, AppVeyorContentLibrary);
         }
 
         private byte[] LoadResourceFile(string fileName)
