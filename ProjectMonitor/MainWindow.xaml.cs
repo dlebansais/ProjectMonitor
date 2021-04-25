@@ -64,10 +64,12 @@
         {
             List<string> MandatorySolutionList = new()
             {
+                "deploy.bat",
                 "signfile.bat",
                 "updatecommit.bat",
                 "updateversion.bat",
                 ".editorconfig",
+                "nuget.config",
             };
 
             foreach (string MandatoryFileName in MandatorySolutionList)

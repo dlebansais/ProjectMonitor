@@ -10,19 +10,23 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="..\deploy.bat" />
     <None Remove="..\signfile.bat" />
     <None Remove="..\updatecommit.bat" />
     <None Remove="..\updateversion.bat" />
     <None Remove="..\.editorconfig" />
+    <None Remove="..\nuget.config" />
     <None Remove="Resources\dll.appveyor.yml" />
     <None Remove="Resources\exe.appveyor.yml" />
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="..\deploy.bat" />
     <EmbeddedResource Include="..\signfile.bat" />
     <EmbeddedResource Include="..\updatecommit.bat" />
     <EmbeddedResource Include="..\updateversion.bat" />
     <EmbeddedResource Include="..\.editorconfig" />
+    <EmbeddedResource Include="..\nuget.config" />
     <EmbeddedResource Include="Resources\dll.appveyor.yml" />
     <EmbeddedResource Include="Resources\exe.appveyor.yml" />
   </ItemGroup>
