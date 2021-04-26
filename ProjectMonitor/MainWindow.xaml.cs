@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Collections.ObjectModel;
     using System.ComponentModel;
     using System.Diagnostics.CodeAnalysis;
     using System.IO;
@@ -18,7 +19,7 @@
 
             IsBusy = true;
             GitProbe = new GitProbe(UserLoginName, RepositoryList, SolutionList, ProjectList);
-            Validation = new(GitProbe);
+            Validation = new(GitProbe, ErrorList);
 
             circleRepository.Source = RepositoryList;
             circleSolution.Source = SolutionList;
@@ -35,6 +36,8 @@
         public RepositoryInfoCollection RepositoryList { get; } = new();
         public SolutionInfoCollection SolutionList { get; } = new();
         public ProjectInfoCollection ProjectList { get; } = new();
+        public double RemaingingRequests { get; private set; } = double.NaN;
+        public ObservableCollection<string> ErrorList { get; } = new();
 
         private async void OnLoaded(object sender, RoutedEventArgs e)
         {
@@ -51,6 +54,9 @@
             await GitProbe.Start();
             if (IsConnected)
                 await Validation.Validate();
+
+            RemaingingRequests = GitProbe.RemaingingRequests;
+            NotifyPropertyChanged(nameof(RemaingingRequests));
         }
 
         private void OnConnected(object sender, EventArgs args)
@@ -82,6 +88,7 @@
             Validation.AddMandatoryIgnoreLine("/nuget-debug");
             Validation.AddMandatoryDependentProject("PreBuild");
             Validation.AddForbiddenProjectFile("packages.config");
+            Validation.AddForbiddenProjectFile("GlobalSuppressions.cs");
 
             byte[] AppVeyorContentExe = LoadResourceFile("Resources.exe.appveyor.yml");
             byte[] AppVeyorContentLibrary = LoadResourceFile("Resources.dll.appveyor.yml");

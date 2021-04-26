@@ -22,6 +22,7 @@
         public RepositoryInfoCollection RepositoryList { get; }
         public SolutionInfoCollection SolutionList { get; }
         public ProjectInfoCollection ProjectList { get; }
+        public double RemaingingRequests { get; private set; }
         #endregion
 
         #region Client Interface
@@ -36,6 +37,7 @@
             await EnumerateRepositories();
             await EnumerateBranches();
             await EnumerateSolutions();
+            await UpdateRemaingingRequests();
         }
 
         public void Stop()

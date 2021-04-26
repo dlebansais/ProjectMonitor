@@ -23,6 +23,13 @@
         public string RelativePath { get { return Source.RelativePath; } }
         public ProjectType ProjectType { get { return Source.ProjectType; } }
         public List<ProjectInfo> Dependencies { get; } = new();
+        public SdkType SdkType { get { return Source.SdkType; } }
+        public string LanguageVersion { get { return Source.LanguageVersion; } }
+        public bool IsNullable { get { return Source.IsNullable; } }
+        public string NeutralLanguage { get { return Source.NeutralLanguage; } }
+        public bool IsEditorConfigLinked { get { return Source.IsEditorConfigLinked; } }
+        public bool IsTreatWarningsAsErrors { get { return Source.IsTreatWarningsAsErrors; } }
+        public IReadOnlyList<PackageReference> PackageReferenceList { get { return Source.PackageReferenceList; } }
 
         public void Invalidate()
         {

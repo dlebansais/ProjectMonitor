@@ -1,27 +1,26 @@
 ﻿namespace Monitor
 {
-    using System;
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
-    using System.Threading;
     using System.Threading.Tasks;
 
     public class ProjectValidation
     {
-        public ProjectValidation(GitProbe gitProbe)
+        public ProjectValidation(GitProbe gitProbe, ICollection<string> errorList)
         {
             GitProbe = gitProbe;
+            ErrorList = errorList;
         }
 
         public GitProbe GitProbe { get; }
+        public ICollection<string> ErrorList { get; }
         public List<RepositoryFile> MandatoryRepositoryFileList { get; } = new();
         public List<RepositoryFile> MandatoryProjectFileList { get; } = new();
         public List<RepositoryFile> ForbiddenProjectFileList { get; } = new();
         public List<IgnoreLine> MandatoryIgnoreLineList { get; } = new();
         public List<DependentProject> MandatoryDependentProjectList { get; } = new();
         public List<ContinuousIntegration> MandatoryContinuousIntegrationList { get; } = new();
-        public List<string> ErrorList { get; } = new();
 
         public void AddMandatoryRepositoryFile(string fileName, byte[] content)
         {
@@ -66,6 +65,9 @@
 
             foreach (SolutionInfo Item in GitProbe.SolutionList)
                 await ValidateSolution(Item);
+
+            ValidatePackageReferenceVersions();
+            ValidatePackageReferenceConditions();
         }
 
         public async Task ValidateRepository(RepositoryInfo repository)
@@ -165,6 +167,8 @@
                     if (!IsValid)
                         solution.Invalidate();
                 }
+
+                ValidateProjectQuality(Project);
             }
         }
 
@@ -255,6 +259,165 @@
                 return await ValidateContent(repository, "/", "appveyor.yml", mandatoryContinuousIntegration.ContentExe, isMandatory: true);
             else
                 return await ValidateContent(repository, "/", "appveyor.yml", mandatoryContinuousIntegration.ContentLibrary, isMandatory: true);
+        }
+
+        public void ValidateProjectQuality(ProjectInfo project)
+        {
+            if (project.SdkType != SlnExplorer.SdkType.Sdk)
+            {
+                ErrorList.Add($"Project {project.ProjectName} has wrong SDK type");
+                project.Invalidate();
+            }
+
+            if (project.ProjectName != "PreBuild")
+            {
+                if (project.LanguageVersion != "9.0")
+                {
+                    ErrorList.Add($"Project {project.ProjectName} use wrong language version {project.LanguageVersion}");
+                    project.Invalidate();
+                }
+
+                if (!project.IsNullable)
+                {
+                    ErrorList.Add($"Project {project.ProjectName} doesn't have nullable enabled");
+                    project.Invalidate();
+                }
+
+                if (project.NeutralLanguage != "en-US")
+                {
+                    ErrorList.Add($"Project {project.ProjectName} use wrong neutral language {project.NeutralLanguage}");
+                    project.Invalidate();
+                }
+
+                if (!project.IsEditorConfigLinked)
+                {
+                    ErrorList.Add($"Project {project.ProjectName} doesn't have .editorconfig linked");
+                    project.Invalidate();
+                }
+
+                if (!project.IsTreatWarningsAsErrors)
+                {
+                    ErrorList.Add($"Project {project.ProjectName} doesn't treat warnings as error");
+                    project.Invalidate();
+                }
+            }
+        }
+
+        public void ValidatePackageReferenceVersions()
+        {
+            Dictionary<string, List<string>> PackageReferenceTable = new();
+
+            foreach (ProjectInfo Project in GitProbe.ProjectList)
+            {
+                foreach (SlnExplorer.PackageReference PackageReference in Project.PackageReferenceList)
+                {
+                    string Name = PackageReference.Name;
+                    string Version = PackageReference.Version;
+
+                    if (!PackageReferenceTable.ContainsKey(Name))
+                        PackageReferenceTable.Add(Name, new List<string>());
+
+                    List<string> ReferenceList = PackageReferenceTable[Name];
+                    if (!ReferenceList.Contains(Version))
+                        ReferenceList.Add(Version);
+                }
+            }
+
+            foreach (KeyValuePair<string, List<string>> Entry in PackageReferenceTable)
+            {
+                List<string> ReferenceList = Entry.Value;
+                ReferenceList.Sort();
+            }
+
+            foreach (KeyValuePair<string, List<string>> Entry in PackageReferenceTable)
+            {
+                string Name = Entry.Key;
+                List<string> ReferenceList = Entry.Value;
+
+                if (ReferenceList.Count > 1)
+                {
+                    string MinVersion = ReferenceList[0];
+                    string MaxVersion = ReferenceList[ReferenceList.Count - 1];
+
+                    ErrorList.Add($"Package {Name} use referenced with several versions from {MinVersion} to {MaxVersion}");
+                    InvalidateProjectsWithOldVersion(Name, MaxVersion);
+                }
+            }
+        }
+
+        private void InvalidateProjectsWithOldVersion(string name, string maxVersion)
+        {
+            foreach (ProjectInfo Project in GitProbe.ProjectList)
+                InvalidateProjectsWithOldVersion(Project, name, maxVersion);
+        }
+
+        private void InvalidateProjectsWithOldVersion(ProjectInfo project, string name, string maxVersion)
+        {
+            foreach (SlnExplorer.PackageReference PackageReference in project.PackageReferenceList)
+                if (PackageReference.Name == name && PackageReference.Version != maxVersion)
+                {
+                    project.Invalidate();
+                    break;
+                }
+        }
+
+        public void ValidatePackageReferenceConditions()
+        {
+            foreach (ProjectInfo Project in GitProbe.ProjectList)
+                ValidatePackageReferenceConditions(Project);
+        }
+
+        public void ValidatePackageReferenceConditions(ProjectInfo project)
+        {
+            List<string> ShortNameList = new();
+
+            foreach (SlnExplorer.PackageReference PackageReference in project.PackageReferenceList)
+            {
+                string Name = PackageReference.Name;
+                if (!Name.EndsWith("-Debug"))
+                    continue;
+
+                string ShortName = Name.Substring(0, Name.Length - 6);
+                ShortNameList.Add(ShortName);
+            }
+
+            List<string> ValidPackageList = new();
+
+            foreach (string ShortName in ShortNameList)
+            {
+                bool HasMainPackage = false;
+                foreach (SlnExplorer.PackageReference PackageReference in project.PackageReferenceList)
+                    if (PackageReference.Name == ShortName)
+                    {
+                        HasMainPackage = true;
+                        break;
+                    }
+
+                if (HasMainPackage)
+                    ValidPackageList.Add(ShortName);
+                else
+                {
+                    ErrorList.Add($"Project {project.ProjectName} has package {ShortName}-Debug but no release version");
+                    project.Invalidate();
+                }
+            }
+
+            foreach (string ShortName in ValidPackageList)
+            {
+                string ShortNameDebug = $"{ShortName}-Debug";
+
+                foreach (SlnExplorer.PackageReference PackageReference in project.PackageReferenceList)
+                {
+                    string Name = PackageReference.Name;
+                    string Condition = PackageReference.Condition;
+
+                    if ((Name == ShortName && Condition != "'$(Configuration)|$(Platform)'!='Debug|x64'") || (Name == ShortNameDebug && Condition != "'$(Configuration)|$(Platform)'=='Debug|x64'"))
+                    {
+                        ErrorList.Add($"Project {project.ProjectName} use package {Name} but with wrong condition {Condition}");
+                        project.Invalidate();
+                    }
+                }
+            }
         }
 
         private static bool IsContentEqual(byte[] content1, byte[] content2)

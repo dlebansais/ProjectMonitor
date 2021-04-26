@@ -149,6 +149,8 @@
                 Result.Add(ActualFileName, Stream);
             }
 
+            await UpdateRemaingingRequests();
+
             return Result;
         }
 
@@ -160,6 +162,20 @@
                         return true;
 
             return false;
+        }
+
+        private async Task UpdateRemaingingRequests()
+        {
+            if (RepositoryList.Count == 0)
+                return;
+
+            MiscellaneousRateLimit RateLimits = await Client.Miscellaneous.GetRateLimits();
+            RateLimit CoreRateLimit = RateLimits.Resources.Core;
+            RateLimit SearchRateLimit = RateLimits.Resources.Search;
+
+            double CoreRatio = (1.0 * CoreRateLimit.Remaining) / CoreRateLimit.Limit;
+            double SearchRatio = (1.0 * SearchRateLimit.Remaining) / SearchRateLimit.Limit;
+            RemaingingRequests = Math.Max(CoreRatio, SearchRatio);
         }
 
         private GitHubClient Client = null!;
