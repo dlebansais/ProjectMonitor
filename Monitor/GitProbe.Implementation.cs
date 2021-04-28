@@ -91,8 +91,7 @@
 
                             if (!IsIgnored)
                             {
-                                string RelativePath = ProjectItem.RelativePath.Replace("\\", "/");
-                                byte[]? Content = await DownloadRepositoryFile(Repository, RelativePath);
+                                byte[]? Content = await DownloadRepositoryFile(Repository, ProjectItem.RelativePath);
                                 if (Content != null)
                                 {
                                     using MemoryStream Stream = new MemoryStream(Content);
@@ -160,13 +159,15 @@
 
         public async Task<byte[]?> DownloadRepositoryFile(RepositoryInfo repository, string filePath)
         {
-            Debug.WriteLine($"Downloading {repository.Owner}/{repository.Name} {filePath}");
+            string UpdatedFilePath = filePath.Replace("\\", "/");
+
+            Debug.WriteLine($"Downloading {repository.Owner}/{repository.Name} {UpdatedFilePath}");
 
             byte[]? Result = null;
 
             try
             {
-                Result = await Client.Repository.Content.GetRawContent(repository.Owner, repository.Name, filePath);
+                Result = await Client.Repository.Content.GetRawContent(repository.Owner, repository.Name, UpdatedFilePath);
             }
             catch (Exception e) when (e is NotFoundException)
             {
