@@ -47,7 +47,7 @@
             foreach (Repository Repository in Result.Items)
             {
                 RepositoryList.Add(new RepositoryInfo(RepositoryList, Repository));
-                if (RepositoryList.Count > 0)
+                if (RepositoryList.Count > 2)
                     break;
             }
         }
@@ -72,7 +72,7 @@
         {
             foreach (RepositoryInfo Repository in RepositoryList)
             {
-                Dictionary<string, Stream?> SolutionStreamTable = await DownloadRepositoryFile(Repository, "/", ".sln");
+                Dictionary<string, Stream?> SolutionStreamTable = await SearchAndDownloadRepositoryFiles(Repository, "/", ".sln");
                 bool IsMainProjectExe = false;
 
                 foreach (KeyValuePair<string, Stream?> Entry in SolutionStreamTable)
@@ -88,17 +88,12 @@
 
                             if (!IsIgnored)
                             {
-                                string RelativePath = Path.GetDirectoryName(ProjectItem.RelativePath).Replace("\\", "/");
-                                string ProjectFileName = Path.GetFileName(ProjectItem.RelativePath);
-
-                                Dictionary<string, Stream?> ProjectStreamTable = await DownloadRepositoryFile(Repository, RelativePath, ProjectFileName);
-                                if (ProjectStreamTable.Count > 0)
+                                string RelativePath = ProjectItem.RelativePath.Replace("\\", "/");
+                                byte[]? Content = await DownloadRepositoryFile(Repository, RelativePath);
+                                if (Content != null)
                                 {
-                                    KeyValuePair<string, Stream?> StreamEntry = ProjectStreamTable.First();
-                                    Stream? ProjectStream = StreamEntry.Value;
-
-                                    if (ProjectStream != null)
-                                        ProjectItem.LoadDetails(ProjectStream);
+                                    using MemoryStream Stream = new MemoryStream(Content);
+                                    ProjectItem.LoadDetails(Stream);
                                 }
 
                                 ProjectInfo NewProject = new(ProjectList, ProjectItem);
@@ -120,19 +115,19 @@
             }
         }
 
-        public async Task<Dictionary<string, Stream?>> DownloadRepositoryFile(RepositoryInfo repository, string path, string fileName)
+        public async Task<Dictionary<string, Stream?>> SearchAndDownloadRepositoryFiles(RepositoryInfo repository, string path, string searchPattern)
         {
-            Debug.WriteLine($"Downloading {path}{fileName} from {repository.Owner}/{repository.Name}");
+            Debug.WriteLine($"Searching and downloading {path} {searchPattern} from {repository.Owner}/{repository.Name}");
 
             Dictionary<string, Stream?> Result = new();
 
             SearchCodeRequest Request = new SearchCodeRequest();
             Request.Path = path;
-            Request.FileName = fileName;
+            Request.FileName = searchPattern;
             Request.Repos.Add(repository.Owner, repository.Name);
 
             SearchCodeResult SearchResult = await Client.Search.SearchCode(Request);
-            
+
             foreach (SearchCode Item in SearchResult.Items)
             {
                 string Url = Item.HtmlUrl;
@@ -144,12 +139,33 @@
                 string ReplacePattern = $"raw.githubusercontent.com/{repository.Owner}/{repository.Name}";
                 Url = Url.Replace(SearchPattern, ReplacePattern);
 
+                string FileName = Path.GetFileName(Url);
+                Debug.WriteLine($"  {FileName}...");
+
                 Stream? Stream = await HttpHelper.Download(Url);
 
                 Result.Add(ActualFileName, Stream);
             }
 
             await UpdateRemaingingRequests();
+
+            return Result;
+        }
+
+        public async Task<byte[]?> DownloadRepositoryFile(RepositoryInfo repository, string filePath)
+        {
+            Debug.WriteLine($"Downloading {repository.Owner}/{repository.Name} {filePath}");
+
+            byte[]? Result = null;
+
+            try
+            {
+                Result = await Client.Repository.Content.GetRawContent(repository.Owner, repository.Name, filePath);
+            }
+            catch (Exception e) when (e is NotFoundException)
+            {
+                Debug.WriteLine("(not found)");
+            }
 
             return Result;
         }

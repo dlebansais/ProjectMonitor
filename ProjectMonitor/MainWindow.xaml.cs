@@ -36,7 +36,7 @@
         public RepositoryInfoCollection RepositoryList { get; } = new();
         public SolutionInfoCollection SolutionList { get; } = new();
         public ProjectInfoCollection ProjectList { get; } = new();
-        public double RemaingingRequests { get; private set; } = double.NaN;
+        public double RemaingingRequests { get; private set; }
         public ObservableCollection<string> ErrorList { get; } = new();
 
         private async void OnLoaded(object sender, RoutedEventArgs e)

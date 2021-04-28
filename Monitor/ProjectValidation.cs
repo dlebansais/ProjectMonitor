@@ -92,20 +92,7 @@
 
         public async Task CheckMandatoryIgnoreLine(RepositoryInfo repository)
         {
-            byte[]? Content = null;
-
-            Dictionary<string, Stream?> DownloadResultTable = await GitProbe.DownloadRepositoryFile(repository, "/", ".gitignore");
-            if (DownloadResultTable.Count > 0)
-            {
-                KeyValuePair<string, Stream?> Entry = DownloadResultTable.First();
-                Stream? DownloadStream = Entry.Value;
-
-                if (DownloadStream != null)
-                {
-                    using BinaryReader Reader = new(DownloadStream);
-                    Content = Reader.ReadBytes((int)DownloadStream.Length);
-                }
-            }
+            byte[]? Content = await GitProbe.DownloadRepositoryFile(repository, "/.gitignore");
 
             if (Content == null)
             {
@@ -184,20 +171,7 @@
 
         public async Task<bool> ValidateContent(RepositoryInfo repository, string rootPath, string fileName, byte[] mandatoryContent, bool isMandatory)
         {
-            Dictionary<string, Stream?> DownloadResultTable = await GitProbe.DownloadRepositoryFile(repository, rootPath, fileName);
-            byte[]? Content = null;
-
-            if (DownloadResultTable.Count > 0)
-            {
-                KeyValuePair<string, Stream?> Entry = DownloadResultTable.First();
-                Stream? DownloadStream = Entry.Value;
-
-                if (DownloadStream != null)
-                {
-                    using BinaryReader Reader = new(DownloadStream);
-                    Content = Reader.ReadBytes((int)DownloadStream.Length);
-                }
-            }
+            byte[]? Content = await GitProbe.DownloadRepositoryFile(repository, $"{rootPath}{fileName}");
 
             string ErrorText;
 
