@@ -3,9 +3,11 @@
     using SlnExplorer;
     using System.Collections.Generic;
     using System.ComponentModel;
+    using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
     using System.Runtime.CompilerServices;
 
+    [DebuggerDisplay("{ProjectName}")]
     public class ProjectInfo : IStatusInfo, INotifyPropertyChanged
     {
         public ProjectInfo(IStatusInfoCollection ownerCollection, Project project)
@@ -16,6 +18,7 @@
         }
 
         public IStatusInfoCollection OwnerCollection { get; }
+        public SolutionInfo ParentSolution { get; set; } = null!;
         public Project Source { get; }
         public bool IsValid { get; private set; }
         public string ProjectName { get { return Source.ProjectName; } }
@@ -30,6 +33,7 @@
         public bool IsEditorConfigLinked { get { return Source.IsEditorConfigLinked; } }
         public bool IsTreatWarningsAsErrors { get { return Source.IsTreatWarningsAsErrors; } }
         public IReadOnlyList<PackageReference> PackageReferenceList { get { return Source.PackageReferenceList; } }
+        public IReadOnlyList<string> ProjectReferences { get { return Source.ProjectReferences; } }
 
         public void Invalidate()
         {

@@ -3,9 +3,11 @@
     using SlnExplorer;
     using System.Collections.Generic;
     using System.ComponentModel;
+    using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
     using System.Runtime.CompilerServices;
 
+    [DebuggerDisplay("{Name}")]
     public class SolutionInfo : IStatusInfo, INotifyPropertyChanged
     {
         public SolutionInfo(IStatusInfoCollection ownerCollection, RepositoryInfo repository, Solution solution, List<ProjectInfo> projectList)

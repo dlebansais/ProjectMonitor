@@ -78,8 +78,11 @@
                 foreach (KeyValuePair<string, Stream?> Entry in SolutionStreamTable)
                     if (Entry.Value != null)
                     {
-                        using StreamReader Reader = new(Entry.Value, Encoding.UTF8);
-                        SlnExplorer.Solution Solution = new(Entry.Key, Reader);
+                        string SolutionName = Path.GetFileNameWithoutExtension(Entry.Key);
+                        Stream SolutionStream = Entry.Value;
+
+                        using StreamReader Reader = new(SolutionStream, Encoding.UTF8);
+                        SlnExplorer.Solution Solution = new(SolutionName, Reader);
                         List<ProjectInfo> LoadedProjectList = new();
 
                         foreach (SlnExplorer.Project ProjectItem in Solution.ProjectList)
@@ -106,6 +109,9 @@
                         {
                             SolutionInfo NewSolution = new(SolutionList, Repository, Solution, LoadedProjectList);
                             SolutionList.Add(NewSolution);
+
+                            foreach (ProjectInfo Item in NewSolution.ProjectList)
+                                Item.ParentSolution = NewSolution;
 
                             IsMainProjectExe |= CheckMainProjectExe(NewSolution);
                         }

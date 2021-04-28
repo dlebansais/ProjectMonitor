@@ -421,6 +421,12 @@
                 if (Item.ProjectGuid == projectGuid || IsRecursivelyDependent(Item, projectGuid))
                     return true;
 
+            foreach (string Item in project.ProjectReferences)
+                foreach (ProjectInfo OtherProject in project.ParentSolution.ProjectList)
+                    if (Item == OtherProject.ProjectName)
+                        if (IsRecursivelyDependent(OtherProject, projectGuid))
+                            return true;
+
             return false;
         }
     }
