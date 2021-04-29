@@ -68,10 +68,14 @@
 
             ValidatePackageReferenceVersions();
             ValidatePackageReferenceConditions();
+            TagValidRepositories();
         }
 
         public async Task ValidateRepository(RepositoryInfo repository)
         {
+            if (repository.SolutionList.Count == 0)
+                return;
+
             foreach (RepositoryFile Item in MandatoryRepositoryFileList)
             {
                 bool IsValid = await ValidateMandatoryFile(repository, "/", Item);
@@ -143,14 +147,14 @@
 
                 foreach (RepositoryFile Item in MandatoryProjectFileList)
                 {
-                    bool IsValid = await ValidateMandatoryFile(solution.Repository, ProjectPath, Item);
+                    bool IsValid = await ValidateMandatoryFile(solution.ParentRepository, ProjectPath, Item);
                     if (!IsValid)
                         solution.Invalidate();
                 }
 
                 foreach (RepositoryFile Item in ForbiddenProjectFileList)
                 {
-                    bool IsValid = await ValidateForbiddenFile(solution.Repository, ProjectPath, Item);
+                    bool IsValid = await ValidateForbiddenFile(solution.ParentRepository, ProjectPath, Item);
                     if (!IsValid)
                         solution.Invalidate();
                 }
@@ -229,10 +233,23 @@
 
         public async Task<bool> ValidateMandatoryContinuousIntegration(RepositoryInfo repository, ContinuousIntegration mandatoryContinuousIntegration)
         {
-            if (repository.IsMainProjectExe)
-                return await ValidateContent(repository, "/", "appveyor.yml", mandatoryContinuousIntegration.ContentExe, isMandatory: true);
+            string ErrorText;
+            byte[]? Content = await GitProbe.DownloadRepositoryFile(repository, "/appveyor.yml");
+
+            if (Content == null)
+                ErrorText = $"In repo {repository.Name}, continuous integration file is missing";
+            else if (!IsContentEqual(Content, mandatoryContinuousIntegration.ContentExe) && !IsContentEqual(Content, mandatoryContinuousIntegration.ContentLibrary))
+                ErrorText = $"In repo {repository.Name}, continuous integration file has invalid content";
             else
-                return await ValidateContent(repository, "/", "appveyor.yml", mandatoryContinuousIntegration.ContentLibrary, isMandatory: true);
+                ErrorText = string.Empty;
+
+            if (ErrorText.Length > 0)
+            {
+                ErrorList.Add(ErrorText);
+                return false;
+            }
+            else
+                return true;
         }
 
         public void ValidateProjectQuality(ProjectInfo project)
@@ -428,6 +445,13 @@
                             return true;
 
             return false;
+        }
+
+        private void TagValidRepositories()
+        {
+            foreach (RepositoryInfo Repository in GitProbe.RepositoryList)
+                if (Repository.IsValid)
+                    GitProbe.TagValidRepository(Repository);
         }
     }
 }

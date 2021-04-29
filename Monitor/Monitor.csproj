@@ -22,6 +22,8 @@
     <PackageReference Include="Contracts" Version="1.0.12" Condition="'$(Configuration)|$(Platform)'!='Debug|x64'" />
     <PackageReference Include="VisualStudioSolutionExplorer-Debug" Version="1.2.3" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
     <PackageReference Include="VisualStudioSolutionExplorer" Version="1.2.3" Condition="'$(Configuration)|$(Platform)'!='Debug|x64'" />
+    <PackageReference Include="RegistryTools-Debug" Version="1.1.0" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
+    <PackageReference Include="RegistryTools" Version="1.1.0" Condition="'$(Configuration)|$(Platform)'!='Debug|x64'" />
   </ItemGroup>
 
   <Target Name="_ResolveCopyLocalNuGetPackagePdbsAndXml" Condition="$(CopyLocalLockFileAssemblies) == true" AfterTargets="ResolveReferences">

@@ -10,10 +10,10 @@
     [DebuggerDisplay("{Name}")]
     public class SolutionInfo : IStatusInfo, INotifyPropertyChanged
     {
-        public SolutionInfo(IStatusInfoCollection ownerCollection, RepositoryInfo repository, Solution solution, List<ProjectInfo> projectList)
+        public SolutionInfo(IStatusInfoCollection ownerCollection, RepositoryInfo parentRepository, Solution solution, List<ProjectInfo> projectList)
         {
             OwnerCollection = ownerCollection;
-            Repository = repository;
+            ParentRepository = parentRepository;
             Source = solution;
             ProjectList = projectList;
             IsValid = true;
@@ -36,7 +36,7 @@
         }
 
         public IStatusInfoCollection OwnerCollection { get; }
-        public RepositoryInfo Repository { get; }
+        public RepositoryInfo ParentRepository { get; }
         public Solution Source { get; }
         public List<ProjectInfo> ProjectList { get; }
         public bool IsValid { get; private set; }
@@ -45,6 +45,7 @@
         public void Invalidate()
         {
             IsValid = false;
+            ParentRepository.Invalidate();
             OwnerCollection.NotifyValidCountChanged();
         }
 

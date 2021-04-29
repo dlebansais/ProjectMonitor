@@ -1,6 +1,7 @@
 ﻿namespace Monitor
 {
     using Octokit;
+    using RegistryTools;
     using System;
     using System.Collections.Generic;
     using System.Diagnostics;
@@ -21,6 +22,7 @@
             Credentials AuthenticationToken = new Credentials(Token);
             Client = new GitHubClient(new ProductHeaderValue(ApplicationName));
             Client.Credentials = AuthenticationToken;
+            RepositorySettings = new("ProjectMonitor", "Repositories");
 
             try
             {
@@ -43,12 +45,38 @@
         {
             SearchRepositoriesRequest Request = new() { User = User.Login };
             SearchRepositoryResult Result = await Client.Search.SearchRepo(Request);
+            Dictionary<Repository, DateTime> LastProcessList = new();
+            List<Repository> ResultList = new();
 
             foreach (Repository Repository in Result.Items)
             {
-                RepositoryList.Add(new RepositoryInfo(RepositoryList, Repository));
-                if (RepositoryList.Count > 2)
-                    break;
+                if (RepositorySettings.GetString(Repository.Name, string.Empty, out string Value) && long.TryParse(Value, out long FileTime))
+                    LastProcessList.Add(Repository, DateTime.FromFileTimeUtc(FileTime));
+                else
+                    ResultList.Add(Repository);
+            }
+
+            for (int i = 0; i < 3; i++)
+            {
+                Repository? OldestRepository = null;
+
+                if (ResultList.Count > 0)
+                {
+                    ResultList.RemoveAt(0);
+                    OldestRepository = ResultList.First();
+                }
+                else
+                {
+                    foreach (KeyValuePair<Repository, DateTime> Entry in LastProcessList)
+                        if (OldestRepository == null || Entry.Value < LastProcessList[OldestRepository])
+                            OldestRepository = Entry.Key;
+
+                    if (OldestRepository != null)
+                        LastProcessList.Remove(OldestRepository);
+                }
+
+                if (OldestRepository != null)
+                    RepositoryList.Add(new RepositoryInfo(RepositoryList, OldestRepository));
             }
         }
 
@@ -112,6 +140,8 @@
                             foreach (ProjectInfo Item in NewSolution.ProjectList)
                                 Item.ParentSolution = NewSolution;
 
+                            Repository.SolutionList.Add(NewSolution);
+
                             IsMainProjectExe |= CheckMainProjectExe(NewSolution);
                         }
                     }
@@ -160,8 +190,19 @@
         public async Task<byte[]?> DownloadRepositoryFile(RepositoryInfo repository, string filePath)
         {
             string UpdatedFilePath = filePath.Replace("\\", "/");
+            string RepositoryAddress = $"{repository.Owner}/{repository.Name}";
 
-            Debug.WriteLine($"Downloading {repository.Owner}/{repository.Name} {UpdatedFilePath}");
+            Debug.WriteLine($"Downloading {RepositoryAddress} {UpdatedFilePath}");
+
+            if (DownloadCache.ContainsKey(RepositoryAddress))
+            {
+                Dictionary<string, byte[]> RepositoryCache = DownloadCache[RepositoryAddress];
+                if (RepositoryCache.ContainsKey(UpdatedFilePath))
+                {
+                    Debug.WriteLine($"  (Already downloaded)");
+                    return RepositoryCache[UpdatedFilePath];
+                }
+            }
 
             byte[]? Result = null;
 
@@ -174,8 +215,20 @@
                 Debug.WriteLine("(not found)");
             }
 
+            if (Result != null)
+            {
+                if (!DownloadCache.ContainsKey(RepositoryAddress))
+                    DownloadCache.Add(RepositoryAddress, new Dictionary<string, byte[]>());
+
+                Dictionary<string, byte[]> RepositoryCache = DownloadCache[RepositoryAddress];
+                if (!RepositoryCache.ContainsKey(UpdatedFilePath))
+                    RepositoryCache.Add(UpdatedFilePath, Result);
+            }
+
             return Result;
         }
+
+        private Dictionary<string, Dictionary<string, byte[]>> DownloadCache = new();
 
         private bool CheckMainProjectExe(SolutionInfo solution)
         {
@@ -201,7 +254,16 @@
             RemaingingRequests = Math.Max(CoreRatio, SearchRatio);
         }
 
+        public void TagValidRepository(RepositoryInfo repository)
+        {
+            DateTime TimeNow = DateTime.UtcNow;
+            long FileTime = TimeNow.ToFileTime();
+
+            RepositorySettings.SetString(repository.Name, FileTime.ToString());
+        }
+
         private GitHubClient Client = null!;
         private User User = null!;
+        private Settings RepositorySettings = null!;
     }
 }

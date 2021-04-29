@@ -38,6 +38,7 @@
         public void Invalidate()
         {
             IsValid = false;
+            ParentSolution.Invalidate();
             OwnerCollection.NotifyValidCountChanged();
         }
 

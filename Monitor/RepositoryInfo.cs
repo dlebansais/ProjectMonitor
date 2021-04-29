@@ -2,6 +2,7 @@
 {
     using Octokit;
     using System;
+    using System.Collections.Generic;
     using System.Collections.ObjectModel;
     using System.ComponentModel;
     using System.Diagnostics.CodeAnalysis;
@@ -28,6 +29,7 @@
         public GitReference MasterCommit { get; private set; } = new();
         public bool IsValid { get; private set; }
         public bool IsMainProjectExe { get; set; }
+        public List<SolutionInfo> SolutionList { get; } = new();
 
         public void CheckMasterBranch()
         {
