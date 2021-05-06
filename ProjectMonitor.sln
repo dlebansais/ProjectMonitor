@@ -6,11 +6,16 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ProjectMonitor", "ProjectMonitor\ProjectMonitor.csproj", "{0F2CF85F-DF99-46A8-8079-A1CF6773DBC8}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Monitor", "Monitor\Monitor.csproj", "{A76A208D-3A54-462E-93F0-BB954EEFACD5}"
+	ProjectSection(ProjectDependencies) = postProject
+		{A8A3AF92-1BCC-434A-AD07-68C265AC363D} = {A8A3AF92-1BCC-434A-AD07-68C265AC363D}
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{EA284666-9B2D-413D-A5CB-339CFAF062B1}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
 	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PreBuild", "PreBuild\PreBuild.csproj", "{A8A3AF92-1BCC-434A-AD07-68C265AC363D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -25,6 +30,10 @@ Global
 		{A76A208D-3A54-462E-93F0-BB954EEFACD5}.Debug|x64.ActiveCfg = Debug|x64
 		{A76A208D-3A54-462E-93F0-BB954EEFACD5}.Debug|x64.Build.0 = Debug|x64
 		{A76A208D-3A54-462E-93F0-BB954EEFACD5}.Release|x64.ActiveCfg = Release|x64
+		{A8A3AF92-1BCC-434A-AD07-68C265AC363D}.Debug|x64.ActiveCfg = Debug|x64
+		{A8A3AF92-1BCC-434A-AD07-68C265AC363D}.Debug|x64.Build.0 = Debug|x64
+		{A8A3AF92-1BCC-434A-AD07-68C265AC363D}.Release|x64.ActiveCfg = Release|x64
+		{A8A3AF92-1BCC-434A-AD07-68C265AC363D}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
