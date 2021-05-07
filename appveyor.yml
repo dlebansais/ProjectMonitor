@@ -25,7 +25,7 @@ matrix:
 
 before_build:
   - dir nuget.config
-  - ps: (Get-Content nuget.config).replace('Insert token here', '$package_token') | Set-Content nuget.config
+  - ps: (Get-Content nuget.config).replace('Insert token here', $env:package_token) | Set-Content nuget.config
   - dir nuget.config
   - type nuget.config
   - nuget restore %APPVEYOR_PROJECT_NAME%.sln
