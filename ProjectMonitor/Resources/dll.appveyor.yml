@@ -28,8 +28,6 @@ before_build:
   - nuget restore %APPVEYOR_PROJECT_NAME%.sln
   - nuget install GitCommitId -DependencyVersion Highest -OutputDirectory packages
 
-platform: x64
-
 configuration:
   - Release
   - Debug

@@ -84,7 +84,7 @@
                 Validation.AddMandatoryRepositoryFile(MandatoryFileName, FileContent);
             }
 
-            byte[] NugetConfigContent = LoadResourceFile("nuget.config");
+            byte[] NugetConfigContent = LoadResourceFile("Resources.nuget.config");
             Validation.AddMandatoryRepositoryFile("nuget.config", NugetConfigContent);
 
             Validation.AddMandatoryIgnoreLine("/nuget");
