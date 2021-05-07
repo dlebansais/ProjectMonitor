@@ -24,9 +24,7 @@ matrix:
   fast_finish: true     # set this flag to immediately finish build once one of the jobs fails.
 
 before_build:
-  - dir nuget.config
   - ps: (Get-Content nuget.config).replace('Insert token here', $env:package_token) | Set-Content nuget.config
-  - dir nuget.config
   - nuget restore %APPVEYOR_PROJECT_NAME%.sln
   - nuget install GitCommitId -DependencyVersion Highest -OutputDirectory packages
 
