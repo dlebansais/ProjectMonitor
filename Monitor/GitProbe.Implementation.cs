@@ -50,6 +50,9 @@
 
             foreach (Repository Repository in Result.Items)
             {
+                if (Repository.Archived)
+                    continue;
+
                 if (RepositorySettings.GetString(Repository.Name, string.Empty, out string Value) && long.TryParse(Value, out long FileTime))
                     LastProcessList.Add(Repository, DateTime.FromFileTimeUtc(FileTime));
                 else

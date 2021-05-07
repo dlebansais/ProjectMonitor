@@ -76,7 +76,6 @@
                 "updatecommit.bat",
                 "updateversion.bat",
                 ".editorconfig",
-                "nuget.config",
             };
 
             foreach (string MandatoryFileName in MandatorySolutionList)
@@ -84,6 +83,9 @@
                 byte[] FileContent = LoadResourceFile(MandatoryFileName);
                 Validation.AddMandatoryRepositoryFile(MandatoryFileName, FileContent);
             }
+
+            byte[] NugetConfigContent = LoadResourceFile("nuget.config");
+            Validation.AddMandatoryRepositoryFile("nuget.config", NugetConfigContent);
 
             Validation.AddMandatoryIgnoreLine("/nuget");
             Validation.AddMandatoryIgnoreLine("/nuget-debug");

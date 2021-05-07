@@ -26,6 +26,7 @@
     <None Remove="..\nuget.config" />
     <None Remove="Resources\dll.appveyor.yml" />
     <None Remove="Resources\exe.appveyor.yml" />
+    <None Remove="Resources\nuget.config" />
   </ItemGroup>
 
   <ItemGroup>
@@ -37,6 +38,7 @@
     <EmbeddedResource Include="..\nuget.config" />
     <EmbeddedResource Include="Resources\dll.appveyor.yml" />
     <EmbeddedResource Include="Resources\exe.appveyor.yml" />
+    <EmbeddedResource Include="Resources\nuget.config" />
   </ItemGroup>
 
   <ItemGroup>

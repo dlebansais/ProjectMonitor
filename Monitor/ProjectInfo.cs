@@ -28,7 +28,7 @@
         public List<ProjectInfo> Dependencies { get; } = new();
         public SdkType SdkType { get { return Source.SdkType; } }
         public string LanguageVersion { get { return Source.LanguageVersion; } }
-        public bool IsNullable { get { return Source.IsNullable; } }
+        public NullableAnnotation IsNullable { get { return Source.IsNullable; } }
         public string NeutralLanguage { get { return Source.NeutralLanguage; } }
         public bool IsEditorConfigLinked { get { return Source.IsEditorConfigLinked; } }
         public bool IsTreatWarningsAsErrors { get { return Source.IsTreatWarningsAsErrors; } }
