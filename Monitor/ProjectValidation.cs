@@ -254,6 +254,9 @@
 
         public void ValidateProjectQuality(ProjectInfo project)
         {
+            if (project.SdkType == SlnExplorer.SdkType.Unknown && project.ProjectType == SlnExplorer.ProjectType.KnownToBeMSBuildFormat)
+                return;
+
             if (project.SdkType != SlnExplorer.SdkType.Sdk)
             {
                 ErrorList.Add($"Project {project.ProjectName} has wrong SDK type");

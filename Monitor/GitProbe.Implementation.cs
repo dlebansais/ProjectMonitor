@@ -65,8 +65,8 @@
 
                 if (ResultList.Count > 0)
                 {
-                    ResultList.RemoveAt(0);
                     OldestRepository = ResultList.First();
+                    ResultList.RemoveAt(0);
                 }
                 else
                 {
