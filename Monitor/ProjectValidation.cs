@@ -268,7 +268,7 @@
                     project.Invalidate();
                 }
 
-                if (project.IsNullable == SlnExplorer.NullableAnnotation.None)
+                if (project.Nullable == SlnExplorer.NullableAnnotation.None)
                 {
                     ErrorList.Add($"Project {project.ProjectName} doesn't have nullable set");
                     project.Invalidate();

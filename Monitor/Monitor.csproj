@@ -27,8 +27,8 @@
     <PackageReference Include="System.Memory" Version="4.5.4" />
     <PackageReference Include="Contracts-Debug" Version="1.0.12" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
     <PackageReference Include="Contracts" Version="1.0.12" Condition="'$(Configuration)|$(Platform)'!='Debug|x64'" />
-    <PackageReference Include="VisualStudioSolutionExplorer-Debug" Version="1.2.4" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
-    <PackageReference Include="VisualStudioSolutionExplorer" Version="1.2.4" Condition="'$(Configuration)|$(Platform)'!='Debug|x64'" />
+    <PackageReference Include="VisualStudioSolutionExplorer-Debug" Version="1.2.5" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
+    <PackageReference Include="VisualStudioSolutionExplorer" Version="1.2.5" Condition="'$(Configuration)|$(Platform)'!='Debug|x64'" />
     <PackageReference Include="RegistryTools-Debug" Version="1.1.0" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
     <PackageReference Include="RegistryTools" Version="1.1.0" Condition="'$(Configuration)|$(Platform)'!='Debug|x64'" />
   </ItemGroup>
