@@ -1,7 +1,5 @@
 ﻿namespace Monitor
 {
-    using Octokit;
-    using System;
     using System.Collections.Generic;
     using System.Collections.ObjectModel;
     using System.ComponentModel;
@@ -10,7 +8,7 @@
 
     public class RepositoryInfo : IStatusInfo, INotifyPropertyChanged
     {
-        public RepositoryInfo(IStatusInfoCollection ownerCollection, Repository repository)
+        public RepositoryInfo(IStatusInfoCollection ownerCollection, GitHubApi.GitHubRepository repository)
         {
             OwnerCollection = ownerCollection;
             Source = repository;
@@ -18,30 +16,32 @@
         }
 
         public IStatusInfoCollection OwnerCollection { get; }
-        public Repository Source { get; }
+        public GitHubApi.GitHubRepository Source { get; }
 
-        public bool Private { get { return Source.Private; } }
-        public string Owner { get { return Source.Owner.Login; } }
+        public string Owner { get { return Source.Owner; } }
         public string Name { get { return Source.Name; } }
         public long Id { get { return Source.Id; } }
+        public bool IsPrivate { get { return Source.IsPrivate; } }
         public ObservableCollection<BranchInfo> BranchList { get; } = new ObservableCollection<BranchInfo>();
-        public BranchInfo MasterBranch { get; private set; } = null!;
-        public GitReference MasterCommit { get; private set; } = new();
+        public GitHubApi.GitHubBranch MasterBranch { get; private set; } = null!;
+        public GitHubApi.GitHubCommit? MasterCommit { get; private set; } = null;
+        public string MasterCommitSha { get; private set; } = string.Empty;
         public bool IsValid { get; private set; }
         public bool IsMainProjectExe { get; set; }
         public List<SolutionInfo> SolutionList { get; } = new();
 
         public void CheckMasterBranch()
         {
-            foreach (BranchInfo Branch in BranchList)
-                if (Branch.Name == "master")
-                {
-                    MasterBranch = Branch;
-                    MasterCommit = MasterBranch.Commit;
-                    NotifyPropertyChanged(nameof(MasterBranch));
-                    NotifyPropertyChanged(nameof(MasterCommit));
-                    break;
-                }
+            if (Source.MasterCommit != null)
+            {
+                MasterBranch = Source.MasterCommit.Branch;
+                MasterCommit = Source.MasterCommit;
+                MasterCommitSha = Source.MasterCommit.Sha;
+
+                NotifyPropertyChanged(nameof(MasterBranch));
+                NotifyPropertyChanged(nameof(MasterCommit));
+                NotifyPropertyChanged(nameof(MasterCommitSha));
+            }
         }
 
         public void Invalidate()

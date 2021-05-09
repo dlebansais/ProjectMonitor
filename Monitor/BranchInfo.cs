@@ -1,23 +1,22 @@
 ﻿namespace Monitor
 {
-    using Octokit;
     using System.ComponentModel;
     using System.Diagnostics.CodeAnalysis;
     using System.Runtime.CompilerServices;
 
     public class BranchInfo : INotifyPropertyChanged
     {
-        public BranchInfo(RepositoryInfo repository, Branch branch)
+        public BranchInfo(RepositoryInfo repository, GitHubApi.GitHubBranch branch)
         {
             Repository = repository;
             Source = branch;
         }
 
         public RepositoryInfo Repository { get; }
-        public Branch Source { get; }
+        public GitHubApi.GitHubBranch Source { get; }
 
         public string Name { get { return Source.Name; } }
-        public GitReference Commit { get { return Source.Commit; } }
+        //public GitReference Commit { get { return Source.Commit; } }
 
         #region Implementation of INotifyPropertyChanged
         /// <summary>

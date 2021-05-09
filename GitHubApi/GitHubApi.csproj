@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <Platforms>x64</Platforms>
     <NeutralLanguage>en-US</NeutralLanguage>
-    <RootNamespace>Monitor</RootNamespace>
+    <RootNamespace>GitHubApi</RootNamespace>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
 
@@ -15,25 +15,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="Token.txt" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <EmbeddedResource Include="Token.txt" />
-  </ItemGroup>
-
-  <ItemGroup>
+    <PackageReference Include="Octokit" Version="0.50.0" />
     <PackageReference Include="System.Memory" Version="4.5.4" />
     <PackageReference Include="Contracts-Debug" Version="1.0.12" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
     <PackageReference Include="Contracts" Version="1.0.12" Condition="'$(Configuration)|$(Platform)'!='Debug|x64'" />
-    <PackageReference Include="VisualStudioSolutionExplorer-Debug" Version="1.2.5" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
-    <PackageReference Include="VisualStudioSolutionExplorer" Version="1.2.5" Condition="'$(Configuration)|$(Platform)'!='Debug|x64'" />
-    <PackageReference Include="RegistryTools-Debug" Version="1.1.0" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
-    <PackageReference Include="RegistryTools" Version="1.1.0" Condition="'$(Configuration)|$(Platform)'!='Debug|x64'" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\GitHubApi\GitHubApi.csproj" />
   </ItemGroup>
 
   <Target Name="_ResolveCopyLocalNuGetPackagePdbsAndXml" Condition="$(CopyLocalLockFileAssemblies) == true" AfterTargets="ResolveReferences">

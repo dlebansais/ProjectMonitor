@@ -76,6 +76,9 @@
             if (repository.SolutionList.Count == 0)
                 return;
 
+            if (GitProbe.IsKnownAsValid(repository))
+                return;
+
             foreach (RepositoryFile Item in MandatoryRepositoryFileList)
             {
                 bool IsValid = await ValidateMandatoryFile(repository, "/", Item);
@@ -96,7 +99,7 @@
 
         public async Task CheckMandatoryIgnoreLine(RepositoryInfo repository)
         {
-            byte[]? Content = await GitProbe.DownloadRepositoryFile(repository, "/.gitignore");
+            byte[]? Content = await GitHubApi.GitHub.DownloadFile(repository.Source, "/.gitignore");
 
             if (Content == null)
             {
@@ -133,6 +136,9 @@
 
         public async Task ValidateSolution(SolutionInfo solution)
         {
+            if (GitProbe.IsKnownAsValid(solution.ParentRepository))
+                return;
+
             foreach (DependentProject Item in MandatoryDependentProjectList)
             {
                 bool IsValid = ValidateMandatoryDependentProject(solution, Item);
@@ -175,7 +181,7 @@
 
         public async Task<bool> ValidateContent(RepositoryInfo repository, string rootPath, string fileName, byte[] mandatoryContent, bool isMandatory)
         {
-            byte[]? Content = await GitProbe.DownloadRepositoryFile(repository, $"{rootPath}{fileName}");
+            byte[]? Content = await GitHubApi.GitHub.DownloadFile(repository.Source, $"{rootPath}{fileName}");
 
             string ErrorText;
 
@@ -234,7 +240,7 @@
         public async Task<bool> ValidateMandatoryContinuousIntegration(RepositoryInfo repository, ContinuousIntegration mandatoryContinuousIntegration)
         {
             string ErrorText;
-            byte[]? Content = await GitProbe.DownloadRepositoryFile(repository, "/appveyor.yml");
+            byte[]? Content = await GitHubApi.GitHub.DownloadFile(repository.Source, "/appveyor.yml");
 
             if (Content == null)
                 ErrorText = $"In repo {repository.Name}, continuous integration file is missing";
@@ -333,7 +339,7 @@
                     string MinVersion = ReferenceList[0];
                     string MaxVersion = ReferenceList[ReferenceList.Count - 1];
 
-                    ErrorList.Add($"Package {Name} use referenced with several versions from {MinVersion} to {MaxVersion}");
+                    ErrorList.Add($"Package {Name} referenced with several versions from {MinVersion} to {MaxVersion}");
                     InvalidateProjectsWithOldVersion(Name, MaxVersion);
                 }
             }

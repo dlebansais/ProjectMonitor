@@ -1,97 +1,89 @@
 ﻿namespace Monitor
 {
-    using Octokit;
     using RegistryTools;
     using System;
     using System.Collections.Generic;
-    using System.Diagnostics;
     using System.IO;
     using System.Linq;
     using System.Text;
-    using System.Threading;
     using System.Threading.Tasks;
 
     public partial class GitProbe
     {
-        public async Task<bool> Init()
+        public void Init()
         {
             using Stream ResourceStream = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream("Monitor.Token.txt");
             using StreamReader ResourceReader = new(ResourceStream, Encoding.ASCII);
             string Token = ResourceReader.ReadToEnd();
 
-            Credentials AuthenticationToken = new Credentials(Token);
-            Client = new GitHubClient(new ProductHeaderValue(ApplicationName));
-            Client.Credentials = AuthenticationToken;
+            GitHubApi.GitHubSettings.Token = Token;
+            GitHubApi.GitHubSettings.OwnerName = OwnerName;
             RepositorySettings = new("ProjectMonitor", "Repositories");
-
-            try
-            {
-                User = await Client.User.Get(Owner);
-                return true;
-            }
-            catch (AuthorizationException exception)
-            {
-                Debug.WriteLine($"Failed to connect: {exception.Message}");
-            }
-            catch
-            {
-                throw;
-            }
-
-            return false;
         }
 
         public async Task EnumerateRepositories()
         {
-            SearchRepositoriesRequest Request = new() { User = User.Login };
-            SearchRepositoryResult Result = await Client.Search.SearchRepo(Request);
-            Dictionary<Repository, DateTime> LastProcessList = new();
-            List<Repository> ResultList = new();
+            Dictionary<GitHubApi.GitHubRepository, DateTime> ProcessedTable = new();
+            List<GitHubApi.GitHubRepository> UnprocessedList = new();
+            await EnumerateProcessedAndUnprocessedRepositories(ProcessedTable, UnprocessedList);
 
-            foreach (Repository Repository in Result.Items)
+            SortEnumeratedRepositories(ProcessedTable, UnprocessedList);
+        }
+
+        public async Task EnumerateProcessedAndUnprocessedRepositories(Dictionary<GitHubApi.GitHubRepository, DateTime> processedTable, List<GitHubApi.GitHubRepository> unprocessedList)
+        {
+            List<GitHubApi.GitHubRepository> ResultItems = await GitHubApi.GitHub.EnumerateRepositories();
+            NotifyStatusUpdated();
+
+            foreach (GitHubApi.GitHubRepository Item in ResultItems)
             {
-                if (Repository.Archived)
-                    continue;
-
-                if (RepositorySettings.GetString(Repository.Name, string.Empty, out string Value) && long.TryParse(Value, out long FileTime))
-                    LastProcessList.Add(Repository, DateTime.FromFileTimeUtc(FileTime));
+                string LastCheckDateKey = SettingLastCheckDateKey(Item);
+                if (RepositorySettings.GetString(LastCheckDateKey, string.Empty, out string Value) && long.TryParse(Value, out long FileTime))
+                    processedTable.Add(Item, DateTime.FromFileTimeUtc(FileTime));
                 else
-                    ResultList.Add(Repository);
+                    unprocessedList.Add(Item);
             }
+        }
 
-            for (int i = 0; i < 3; i++)
+        public void SortEnumeratedRepositories(Dictionary<GitHubApi.GitHubRepository, DateTime> processedTable, List<GitHubApi.GitHubRepository> unprocessedList)
+        {
+            GitHubApi.GitHubRepository? OldestRepository;
+
+            do
             {
-                Repository? OldestRepository = null;
+                OldestRepository = null;
 
-                if (ResultList.Count > 0)
+                if (unprocessedList.Count > 0)
                 {
-                    OldestRepository = ResultList.First();
-                    ResultList.RemoveAt(0);
+                    OldestRepository = unprocessedList.First();
+                    unprocessedList.RemoveAt(0);
                 }
                 else
                 {
-                    foreach (KeyValuePair<Repository, DateTime> Entry in LastProcessList)
-                        if (OldestRepository == null || Entry.Value < LastProcessList[OldestRepository])
+                    foreach (KeyValuePair<GitHubApi.GitHubRepository, DateTime> Entry in processedTable)
+                        if (OldestRepository == null || Entry.Value < processedTable[OldestRepository])
                             OldestRepository = Entry.Key;
 
                     if (OldestRepository != null)
-                        LastProcessList.Remove(OldestRepository);
+                        processedTable.Remove(OldestRepository);
                 }
 
                 if (OldestRepository != null)
                     RepositoryList.Add(new RepositoryInfo(RepositoryList, OldestRepository));
             }
+            while (OldestRepository != null);
         }
 
         public async Task EnumerateBranches()
         {
             foreach (RepositoryInfo Repository in RepositoryList)
             {
-                IReadOnlyList<Branch> BranchList = await Client.Repository.Branch.GetAll(Repository.Id);
+                List<GitHubApi.GitHubBranch> BranchItems = await GitHubApi.GitHub.EnumerateBranches(Repository.Source);
+                NotifyStatusUpdated();
 
-                foreach (Branch Branch in BranchList)
+                foreach (GitHubApi.GitHubBranch Item in BranchItems)
                 {
-                    BranchInfo NewBranch = new BranchInfo(Repository, Branch);
+                    BranchInfo NewBranch = new BranchInfo(Repository, Item);
                     Repository.BranchList.Add(NewBranch);
                 }
 
@@ -102,136 +94,63 @@
         public async Task EnumerateSolutions()
         {
             foreach (RepositoryInfo Repository in RepositoryList)
-            {
-                Dictionary<string, Stream?> SolutionStreamTable = await SearchAndDownloadRepositoryFiles(Repository, "/", ".sln");
-                bool IsMainProjectExe = false;
+                await EnumerateSolutionsInRepository(Repository);
+        }
 
-                foreach (KeyValuePair<string, Stream?> Entry in SolutionStreamTable)
-                    if (Entry.Value != null)
+        public async Task EnumerateSolutionsInRepository(RepositoryInfo repository)
+        {
+            Dictionary<string, Stream?> SolutionStreamTable = await GitHubApi.GitHub.EnumerateFiles(repository.Source, "/", ".sln");
+            NotifyStatusUpdated();
+
+            bool IsMainProjectExe = false;
+
+            foreach (KeyValuePair<string, Stream?> Entry in SolutionStreamTable)
+                if (Entry.Value != null)
+                {
+                    string SolutionName = Path.GetFileNameWithoutExtension(Entry.Key);
+                    Stream SolutionStream = Entry.Value;
+
+                    using StreamReader Reader = new(SolutionStream, Encoding.UTF8);
+                    SlnExplorer.Solution Solution = new(SolutionName, Reader);
+                    List<ProjectInfo> LoadedProjectList = new();
+
+                    foreach (SlnExplorer.Project ProjectItem in Solution.ProjectList)
                     {
-                        string SolutionName = Path.GetFileNameWithoutExtension(Entry.Key);
-                        Stream SolutionStream = Entry.Value;
+                        bool IsIgnored = ProjectItem.ProjectType > SlnExplorer.ProjectType.KnownToBeMSBuildFormat;
 
-                        using StreamReader Reader = new(SolutionStream, Encoding.UTF8);
-                        SlnExplorer.Solution Solution = new(SolutionName, Reader);
-                        List<ProjectInfo> LoadedProjectList = new();
-
-                        foreach (SlnExplorer.Project ProjectItem in Solution.ProjectList)
+                        if (!IsIgnored)
                         {
-                            bool IsIgnored = ProjectItem.ProjectType > SlnExplorer.ProjectType.KnownToBeMSBuildFormat;
+                            byte[]? Content = await GitHubApi.GitHub.DownloadFile(repository.Source, ProjectItem.RelativePath);
+                            NotifyStatusUpdated();
 
-                            if (!IsIgnored)
+                            if (Content != null)
                             {
-                                byte[]? Content = await DownloadRepositoryFile(Repository, ProjectItem.RelativePath);
-                                if (Content != null)
-                                {
-                                    using MemoryStream Stream = new MemoryStream(Content);
-                                    ProjectItem.LoadDetails(Stream);
-                                }
-
-                                ProjectInfo NewProject = new(ProjectList, ProjectItem);
-                                ProjectList.Add(NewProject);
-                                LoadedProjectList.Add(NewProject);
+                                using MemoryStream Stream = new MemoryStream(Content);
+                                ProjectItem.LoadDetails(Stream);
                             }
-                        }
 
-                        if (LoadedProjectList.Count > 0)
-                        {
-                            SolutionInfo NewSolution = new(SolutionList, Repository, Solution, LoadedProjectList);
-                            SolutionList.Add(NewSolution);
-
-                            foreach (ProjectInfo Item in NewSolution.ProjectList)
-                                Item.ParentSolution = NewSolution;
-
-                            Repository.SolutionList.Add(NewSolution);
-
-                            IsMainProjectExe |= CheckMainProjectExe(NewSolution);
+                            ProjectInfo NewProject = new(ProjectList, ProjectItem);
+                            ProjectList.Add(NewProject);
+                            LoadedProjectList.Add(NewProject);
                         }
                     }
 
-                Repository.IsMainProjectExe = IsMainProjectExe;
-            }
-        }
+                    if (LoadedProjectList.Count > 0)
+                    {
+                        SolutionInfo NewSolution = new(SolutionList, repository, Solution, LoadedProjectList);
+                        SolutionList.Add(NewSolution);
 
-        public async Task<Dictionary<string, Stream?>> SearchAndDownloadRepositoryFiles(RepositoryInfo repository, string path, string searchPattern)
-        {
-            Debug.WriteLine($"Searching and downloading {path} {searchPattern} from {repository.Owner}/{repository.Name}");
+                        foreach (ProjectInfo Item in NewSolution.ProjectList)
+                            Item.ParentSolution = NewSolution;
 
-            Dictionary<string, Stream?> Result = new();
+                        repository.SolutionList.Add(NewSolution);
 
-            SearchCodeRequest Request = new SearchCodeRequest();
-            Request.Path = path;
-            Request.FileName = searchPattern;
-            Request.Repos.Add(repository.Owner, repository.Name);
-
-            SearchCodeResult SearchResult = await Client.Search.SearchCode(Request);
-
-            foreach (SearchCode Item in SearchResult.Items)
-            {
-                string Url = Item.HtmlUrl;
-
-                int Index = Url.LastIndexOf("/");
-                string ActualFileName = Url.Substring(Index + 1);
-
-                string SearchPattern = $"github.com/{repository.Owner}/{repository.Name}/blob";
-                string ReplacePattern = $"raw.githubusercontent.com/{repository.Owner}/{repository.Name}";
-                Url = Url.Replace(SearchPattern, ReplacePattern);
-
-                string FileName = Path.GetFileName(Url);
-                Debug.WriteLine($"  {FileName}...");
-
-                Stream? Stream = await HttpHelper.Download(Url);
-
-                Result.Add(ActualFileName, Stream);
-            }
-
-            await UpdateRemaingingRequests();
-
-            return Result;
-        }
-
-        public async Task<byte[]?> DownloadRepositoryFile(RepositoryInfo repository, string filePath)
-        {
-            string UpdatedFilePath = filePath.Replace("\\", "/");
-            string RepositoryAddress = $"{repository.Owner}/{repository.Name}";
-
-            Debug.WriteLine($"Downloading {RepositoryAddress} {UpdatedFilePath}");
-
-            if (DownloadCache.ContainsKey(RepositoryAddress))
-            {
-                Dictionary<string, byte[]> RepositoryCache = DownloadCache[RepositoryAddress];
-                if (RepositoryCache.ContainsKey(UpdatedFilePath))
-                {
-                    Debug.WriteLine($"  (Already downloaded)");
-                    return RepositoryCache[UpdatedFilePath];
+                        IsMainProjectExe |= CheckMainProjectExe(NewSolution);
+                    }
                 }
-            }
 
-            byte[]? Result = null;
-
-            try
-            {
-                Result = await Client.Repository.Content.GetRawContent(repository.Owner, repository.Name, UpdatedFilePath);
-            }
-            catch (Exception e) when (e is NotFoundException)
-            {
-                Debug.WriteLine("(not found)");
-            }
-
-            if (Result != null)
-            {
-                if (!DownloadCache.ContainsKey(RepositoryAddress))
-                    DownloadCache.Add(RepositoryAddress, new Dictionary<string, byte[]>());
-
-                Dictionary<string, byte[]> RepositoryCache = DownloadCache[RepositoryAddress];
-                if (!RepositoryCache.ContainsKey(UpdatedFilePath))
-                    RepositoryCache.Add(UpdatedFilePath, Result);
-            }
-
-            return Result;
+            repository.IsMainProjectExe = IsMainProjectExe;
         }
-
-        private Dictionary<string, Dictionary<string, byte[]>> DownloadCache = new();
 
         private bool CheckMainProjectExe(SolutionInfo solution)
         {
@@ -243,30 +162,36 @@
             return false;
         }
 
-        private async Task UpdateRemaingingRequests()
-        {
-            if (RepositoryList.Count == 0)
-                return;
-
-            MiscellaneousRateLimit RateLimits = await Client.Miscellaneous.GetRateLimits();
-            RateLimit CoreRateLimit = RateLimits.Resources.Core;
-            RateLimit SearchRateLimit = RateLimits.Resources.Search;
-
-            double CoreRatio = (1.0 * CoreRateLimit.Remaining) / CoreRateLimit.Limit;
-            double SearchRatio = (1.0 * SearchRateLimit.Remaining) / SearchRateLimit.Limit;
-            RemaingingRequests = Math.Max(CoreRatio, SearchRatio);
-        }
-
         public void TagValidRepository(RepositoryInfo repository)
         {
             DateTime TimeNow = DateTime.UtcNow;
             long FileTime = TimeNow.ToFileTime();
 
-            RepositorySettings.SetString(repository.Name, FileTime.ToString());
+            string LastCheckDateKey = SettingLastCheckDateKey(repository.Source);
+            RepositorySettings.SetString(LastCheckDateKey, FileTime.ToString());
+
+            string LastValidCommitKey = SettingLastValidCommitKey(repository.Source);
+            RepositorySettings.SetString(LastValidCommitKey, repository.MasterCommitSha);
         }
 
-        private GitHubClient Client = null!;
-        private User User = null!;
+        private static string SettingLastCheckDateKey(GitHubApi.GitHubRepository repository)
+        {
+            return $"{repository.Name}-LastCheckDate";
+        }
+
+        private static string SettingLastValidCommitKey(GitHubApi.GitHubRepository repository)
+        {
+            return $"{repository.Name}-LastValidCommit";
+        }
+
+        public bool IsKnownAsValid(RepositoryInfo repository)
+        {
+            string LastValidCommitKey = SettingLastValidCommitKey(repository.Source);
+            string LastValidCommit = RepositorySettings.GetString(LastValidCommitKey, string.Empty);
+
+            return LastValidCommit == repository.MasterCommitSha;
+        }
+
         private Settings RepositorySettings = null!;
     }
 }

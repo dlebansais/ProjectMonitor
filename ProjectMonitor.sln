@@ -17,6 +17,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PreBuild", "PreBuild\PreBuild.csproj", "{A8A3AF92-1BCC-434A-AD07-68C265AC363D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GitHubApi", "GitHubApi\GitHubApi.csproj", "{BB652D37-0893-48D4-8633-189C77C3B9FE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -35,6 +37,10 @@ Global
 		{A8A3AF92-1BCC-434A-AD07-68C265AC363D}.Debug|x64.Build.0 = Debug|x64
 		{A8A3AF92-1BCC-434A-AD07-68C265AC363D}.Release|x64.ActiveCfg = Release|x64
 		{A8A3AF92-1BCC-434A-AD07-68C265AC363D}.Release|x64.Build.0 = Release|x64
+		{BB652D37-0893-48D4-8633-189C77C3B9FE}.Debug|x64.ActiveCfg = Debug|x64
+		{BB652D37-0893-48D4-8633-189C77C3B9FE}.Debug|x64.Build.0 = Debug|x64
+		{BB652D37-0893-48D4-8633-189C77C3B9FE}.Release|x64.ActiveCfg = Release|x64
+		{BB652D37-0893-48D4-8633-189C77C3B9FE}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

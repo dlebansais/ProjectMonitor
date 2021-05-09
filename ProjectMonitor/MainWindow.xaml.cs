@@ -34,37 +34,38 @@
         public string UserLoginName { get; } = "dlebansais";
         public bool IsBusy { get; private set; }
         public bool IsConnected { get { return GitProbe.IsConnected; } }
+        public bool IsSlowingDown { get { return GitProbe.IsSlowingDown; } }
         public RepositoryInfoCollection RepositoryList { get; } = new();
         public SolutionInfoCollection SolutionList { get; } = new();
         public ProjectInfoCollection ProjectList { get; } = new();
-        public double RemaingingRequests { get; private set; }
+        public double RemainingRequests { get { return GitProbe.RemainingRequests; } }
         public ObservableCollection<string> ErrorList { get; } = new();
 
         private async void OnLoaded(object sender, RoutedEventArgs e)
         {
-            /*if (!IsConnected)
-            {
-                IsConnected = true;
-                IsBusy = false;
-                NotifyPropertyChanged(nameof(IsBusy));
-                return;
-            }*/
-
-            GitProbe.Connected += OnConnected;
+            GitProbe.StatusUpdated += OnStatusUpdated;
+            GitProbe.SlowDownChanged += OnSlowDownChanged;
 
             await GitProbe.Start();
             if (IsConnected)
                 await Validation.Validate();
-
-            RemaingingRequests = GitProbe.RemaingingRequests;
-            NotifyPropertyChanged(nameof(RemaingingRequests));
         }
 
-        private void OnConnected(object sender, EventArgs args)
+        private void OnStatusUpdated(object sender, EventArgs args)
         {
-            IsBusy = false;
-            NotifyPropertyChanged(nameof(IsBusy));
+            if (IsBusy)
+            {
+                IsBusy = false;
+                NotifyPropertyChanged(nameof(IsBusy));
+            }
+
             NotifyPropertyChanged(nameof(IsConnected));
+            NotifyPropertyChanged(nameof(RemainingRequests));
+        }
+
+        private void OnSlowDownChanged(object sender, EventArgs args)
+        {
+            NotifyPropertyChanged(nameof(IsSlowingDown));
         }
 
         private void InitValidation()
