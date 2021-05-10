@@ -44,6 +44,9 @@
                 <TextBlock Grid.Column="7" Grid.Row="0" Text="{Binding MasterCommitSha}" Margin="5,0,0,0"/>
             </Grid>
         </DataTemplate>
+        <DataTemplate x:Key="ErrorTemplate">
+            <TextBox Text="{Binding ErrorText, Mode=OneWay}" BorderThickness="0"/>
+        </DataTemplate>
     </Window.Resources>
     <Grid>
         <Grid Visibility="{Binding IsBusy, Converter={StaticResource convBooleanToObject}, ConverterParameter={StaticResource VisibleCollapsed}}" Margin="10,10,10,10">
@@ -66,7 +69,7 @@
                     <local:StatusCircleControl x:Name="circleProject" Grid.Column="2"/>
                 </Grid>
                 <ScrollViewer DockPanel.Dock="Top" MaxHeight="300" Margin="0,10,0,0">
-                    <ListBox ItemsSource="{Binding ErrorList}" BorderThickness="0"/>
+                    <ListBox ItemsSource="{Binding ErrorList}" ItemTemplate="{StaticResource ErrorTemplate}" BorderThickness="0"/>
                 </ScrollViewer>
                 <ScrollViewer MaxHeight="300" Margin="0,10,0,0">
                     <ItemsControl ItemsSource="{Binding RepositoryList}" ItemTemplate="{StaticResource RepositoryTemplate}"/>

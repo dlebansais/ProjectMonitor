@@ -1,11 +1,11 @@
 ﻿namespace Monitor
 {
-    using SlnExplorer;
     using System.Collections.Generic;
     using System.ComponentModel;
     using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
     using System.Runtime.CompilerServices;
+    using SlnExplorer;
 
     [DebuggerDisplay("{Name}")]
     public class SolutionInfo : IStatusInfo, INotifyPropertyChanged
@@ -41,6 +41,7 @@
         public List<ProjectInfo> ProjectList { get; }
         public bool IsValid { get; private set; }
         public string Name { get { return Source.Name; } }
+        public bool IsChecked { get; set; }
 
         public void Invalidate()
         {
@@ -50,9 +51,6 @@
         }
 
         #region Implementation of INotifyPropertyChanged
-        /// <summary>
-        /// Implements the PropertyChanged event.
-        /// </summary>
         public event PropertyChangedEventHandler? PropertyChanged;
 
         internal void NotifyPropertyChanged(string propertyName)

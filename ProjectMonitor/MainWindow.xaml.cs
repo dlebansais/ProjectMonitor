@@ -39,12 +39,13 @@
         public SolutionInfoCollection SolutionList { get; } = new();
         public ProjectInfoCollection ProjectList { get; } = new();
         public double RemainingRequests { get { return GitProbe.RemainingRequests; } }
-        public ObservableCollection<string> ErrorList { get; } = new();
+        public ObservableCollection<MonitorError> ErrorList { get; } = new();
 
         private async void OnLoaded(object sender, RoutedEventArgs e)
         {
             GitProbe.StatusUpdated += OnStatusUpdated;
             GitProbe.SlowDownChanged += OnSlowDownChanged;
+            Validation.ActivityReported += OnActivityReported;
 
             await GitProbe.Start();
             if (IsConnected)
@@ -107,16 +108,31 @@
             return Reader.ReadBytes((int)ResourceStream.Length);
         }
 
+        private void OnActivityReported(object sender, ActivityReportedArgs args)
+        {
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.ContextIdle, new Action<List<MonitorError>>(OnActivityReported), args.ErrorToRemoveList);
+        }
+
+        private async void OnActivityReported(List<MonitorError> errorToRemoveList)
+        {
+            foreach (MonitorError Error in errorToRemoveList)
+                ErrorList.Remove(Error);
+
+            NotifyPropertyChanged(nameof(RemainingRequests));
+
+            if (errorToRemoveList.Count > 0)
+            {
+                await GitProbe.Restart();
+                if (IsConnected)
+                    await Validation.Validate();
+            }
+        }
+
         private GitProbe GitProbe;
         private ProjectValidation Validation;
 
         #region Implementation of INotifyPropertyChanged
-        /// <summary>
-        /// Implements the PropertyChanged event.
-        /// </summary>
-#nullable disable annotations
-        public event PropertyChangedEventHandler PropertyChanged;
-#nullable restore annotations
+        public event PropertyChangedEventHandler? PropertyChanged;
 
         internal void NotifyPropertyChanged(string propertyName)
         {

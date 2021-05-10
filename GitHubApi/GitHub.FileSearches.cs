@@ -1,10 +1,10 @@
 ﻿namespace GitHubApi
 {
-    using Octokit;
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.IO;
     using System.Threading.Tasks;
+    using Octokit;
 
     public static partial class GitHub
     {

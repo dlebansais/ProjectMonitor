@@ -1,20 +1,22 @@
 ﻿namespace Monitor
 {
+    using System;
     using System.Collections.Generic;
     using System.IO;
-    using System.Linq;
     using System.Threading.Tasks;
 
     public class ProjectValidation
     {
-        public ProjectValidation(GitProbe gitProbe, ICollection<string> errorList)
+        public ProjectValidation(GitProbe gitProbe, ICollection<MonitorError> errorList)
         {
             GitProbe = gitProbe;
             ErrorList = errorList;
+
+            GitHubApi.GitHub.ActivityReported += OnActivityReported;
         }
 
         public GitProbe GitProbe { get; }
-        public ICollection<string> ErrorList { get; }
+        public ICollection<MonitorError> ErrorList { get; }
         public List<RepositoryFile> MandatoryRepositoryFileList { get; } = new();
         public List<RepositoryFile> MandatoryProjectFileList { get; } = new();
         public List<RepositoryFile> ForbiddenProjectFileList { get; } = new();
@@ -60,15 +62,33 @@
 
         public async Task Validate()
         {
+            bool HasRepositoryOrSolutionChecked = false;
+
             foreach (RepositoryInfo Item in GitProbe.RepositoryList)
-                await ValidateRepository(Item);
+                if (!Item.IsChecked)
+                {
+                    await ValidateRepository(Item);
+                    Item.IsChecked = true;
+                    HasRepositoryOrSolutionChecked = true;
+                }
 
             foreach (SolutionInfo Item in GitProbe.SolutionList)
-                await ValidateSolution(Item);
+                if (!Item.IsChecked)
+                {
+                    await ValidateSolution(Item);
+                    Item.IsChecked = true;
+                    HasRepositoryOrSolutionChecked = true;
+                }
 
-            ValidatePackageReferenceVersions();
-            ValidatePackageReferenceConditions();
+            if (HasRepositoryOrSolutionChecked)
+            {
+                ValidatePackageReferenceVersions();
+                ValidatePackageReferenceConditions();
+            }
+
             TagValidRepositories();
+
+            GitHubApi.GitHub.SubscribeToActivity();
         }
 
         public async Task ValidateRepository(RepositoryInfo repository)
@@ -104,7 +124,9 @@
             if (Content == null)
             {
                 repository.Invalidate();
-                ErrorList.Add($"repo {repository.Name} is missing a .gitignore");
+
+                string ErrorText = $"repo {repository.Name} is missing a .gitignore";
+                ErrorList.Add(new RepositoryError(repository, ErrorText));
                 return;
             }
 
@@ -130,7 +152,9 @@
             if (LineToCheckList.Count > 0)
             {
                 repository.Invalidate();
-                ErrorList.Add($"repo {repository.Name} is missing {LineToCheckList.Count} lines in .gitignore");
+
+                string ErrorText = $"repo {repository.Name} is missing {LineToCheckList.Count} lines in .gitignore";
+                ErrorList.Add(new RepositoryError(repository, ErrorText));
             }
         }
 
@@ -201,7 +225,7 @@
 
             if (ErrorText.Length > 0)
             {
-                ErrorList.Add(ErrorText);
+                ErrorList.Add(new RepositoryError(repository, ErrorText));
                 return false;
             }
             else
@@ -219,9 +243,11 @@
                     DependentProject = Project;
                     break;
                 }
+
             if (DependentProject == null)
             {
-                ErrorList.Add($"Solution {solution.Name} is missing project {MandatoryProjectName}");
+                string ErrorText = $"Solution {solution.Name} is missing project {MandatoryProjectName}";
+                ErrorList.Add(new RepositoryError(solution.ParentRepository, ErrorText));
                 return false;
             }
 
@@ -230,7 +256,8 @@
                 if (Project.ProjectGuid != DependentProject.ProjectGuid)
                     if (!IsRecursivelyDependent(Project, DependentProject.ProjectGuid))
                     {
-                        ErrorList.Add($"In solution {solution.Name} project {Project.ProjectName} should depend on {MandatoryProjectName}");
+                        string ErrorText = $"In solution {solution.Name} project {Project.ProjectName} should depend on {MandatoryProjectName}";
+                        ErrorList.Add(new RepositoryError(solution.ParentRepository, ErrorText));
                         IsDependent = false;
                     }
 
@@ -251,7 +278,7 @@
 
             if (ErrorText.Length > 0)
             {
-                ErrorList.Add(ErrorText);
+                ErrorList.Add(new RepositoryError(repository, ErrorText));
                 return false;
             }
             else
@@ -265,7 +292,8 @@
 
             if (project.SdkType != SlnExplorer.SdkType.Sdk)
             {
-                ErrorList.Add($"Project {project.ProjectName} has wrong SDK type");
+                string ErrorText = $"Project {project.ProjectName} has wrong SDK type";
+                ErrorList.Add(new RepositoryError(project.ParentSolution.ParentRepository, ErrorText));
                 project.Invalidate();
             }
 
@@ -273,31 +301,36 @@
             {
                 if (project.LanguageVersion != "9.0")
                 {
-                    ErrorList.Add($"Project {project.ProjectName} use wrong language version {project.LanguageVersion}");
+                    string ErrorText = $"Project {project.ProjectName} use wrong language version {project.LanguageVersion}";
+                    ErrorList.Add(new RepositoryError(project.ParentSolution.ParentRepository, ErrorText));
                     project.Invalidate();
                 }
 
                 if (project.Nullable == SlnExplorer.NullableAnnotation.None)
                 {
-                    ErrorList.Add($"Project {project.ProjectName} doesn't have nullable set");
+                    string ErrorText = $"Project {project.ProjectName} doesn't have nullable set";
+                    ErrorList.Add(new RepositoryError(project.ParentSolution.ParentRepository, ErrorText));
                     project.Invalidate();
                 }
 
                 if (project.NeutralLanguage != "en-US")
                 {
-                    ErrorList.Add($"Project {project.ProjectName} use wrong neutral language {project.NeutralLanguage}");
+                    string ErrorText = $"Project {project.ProjectName} use wrong neutral language {project.NeutralLanguage}";
+                    ErrorList.Add(new RepositoryError(project.ParentSolution.ParentRepository, ErrorText));
                     project.Invalidate();
                 }
 
                 if (!project.IsEditorConfigLinked)
                 {
-                    ErrorList.Add($"Project {project.ProjectName} doesn't have .editorconfig linked");
+                    string ErrorText = $"Project {project.ProjectName} doesn't have .editorconfig linked";
+                    ErrorList.Add(new RepositoryError(project.ParentSolution.ParentRepository, ErrorText));
                     project.Invalidate();
                 }
 
                 if (!project.IsTreatWarningsAsErrors)
                 {
-                    ErrorList.Add($"Project {project.ProjectName} doesn't treat warnings as error");
+                    string ErrorText = $"Project {project.ProjectName} doesn't treat warnings as error";
+                    ErrorList.Add(new RepositoryError(project.ParentSolution.ParentRepository, ErrorText));
                     project.Invalidate();
                 }
             }
@@ -339,7 +372,8 @@
                     string MinVersion = ReferenceList[0];
                     string MaxVersion = ReferenceList[ReferenceList.Count - 1];
 
-                    ErrorList.Add($"Package {Name} referenced with several versions from {MinVersion} to {MaxVersion}");
+                    string ErrorText = $"Package {Name} referenced with several versions from {MinVersion} to {MaxVersion}";
+                    ErrorList.Add(new PackageError(ErrorText));
                     InvalidateProjectsWithOldVersion(Name, MaxVersion);
                 }
             }
@@ -397,7 +431,8 @@
                     ValidPackageList.Add(ShortName);
                 else
                 {
-                    ErrorList.Add($"Project {project.ProjectName} has package {ShortName}-Debug but no release version");
+                    string ErrorText = $"Project {project.ProjectName} has package {ShortName}-Debug but no release version";
+                    ErrorList.Add(new RepositoryError(project.ParentSolution.ParentRepository, ErrorText));
                     project.Invalidate();
                 }
             }
@@ -413,7 +448,8 @@
 
                     if ((Name == ShortName && Condition != "'$(Configuration)|$(Platform)'!='Debug|x64'") || (Name == ShortNameDebug && Condition != "'$(Configuration)|$(Platform)'=='Debug|x64'"))
                     {
-                        ErrorList.Add($"Project {project.ProjectName} use package {Name} but with wrong condition {Condition}");
+                        string ErrorText = $"Project {project.ProjectName} use package {Name} but with wrong condition {Condition}";
+                        ErrorList.Add(new RepositoryError(project.ParentSolution.ParentRepository, ErrorText));
                         project.Invalidate();
                     }
                 }
@@ -461,6 +497,61 @@
             foreach (RepositoryInfo Repository in GitProbe.RepositoryList)
                 if (Repository.IsValid)
                     GitProbe.TagValidRepository(Repository);
+        }
+
+        private void OnActivityReported(object sender, GitHubApi.ActivityReportedEventArgs args)
+        {
+            List<long> RepositoryIdList = args.ModifiedRepositoryIdList;
+            List<MonitorError> ErrorToRemoveList = new();
+
+            if (RepositoryIdList.Count > 0)
+            {
+                GitHubApi.GitHub.UnsubscribeToActivity();
+                GitHubApi.GitHub.ClearCache();
+
+                RemovePackageErrors(ErrorToRemoveList);
+                RemoveRepositoriesErrors(RepositoryIdList, ErrorToRemoveList);
+                TagRepositoriesUnchecked(RepositoryIdList);
+            }
+
+            NotifyActivityReported(ErrorToRemoveList);
+        }
+
+        private void RemovePackageErrors(List<MonitorError> errorToRemoveList)
+        {
+            foreach (MonitorError Error in ErrorList)
+                if (Error is PackageError)
+                    errorToRemoveList.Add(Error);
+        }
+
+        private void RemoveRepositoriesErrors(List<long> repositoryIdList, List<MonitorError> errorToRemoveList)
+        {
+            foreach (long Id in repositoryIdList)
+            {
+                foreach (MonitorError Error in ErrorList)
+                    if (Error is RepositoryError AsRepositoryError && AsRepositoryError.Repository.Id == Id)
+                        errorToRemoveList.Add(Error);
+            }
+        }
+
+        private void TagRepositoriesUnchecked(List<long> repositoryIdList)
+        {
+            foreach (long Id in repositoryIdList)
+            {
+                foreach (RepositoryInfo Repository in GitProbe.RepositoryList)
+                    if (Repository.Id == Id)
+                    {
+                        Repository.IsChecked = false;
+                        break;
+                    }
+            }
+        }
+
+        public event EventHandler<ActivityReportedArgs>? ActivityReported;
+
+        private void NotifyActivityReported(List<MonitorError> errorToRemoveList)
+        {
+            ActivityReported?.Invoke(null, new ActivityReportedArgs(errorToRemoveList));
         }
     }
 }

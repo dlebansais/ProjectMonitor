@@ -1,6 +1,5 @@
 ﻿namespace ProjectMonitor
 {
-    using Monitor;
     using System;
     using System.Collections.Specialized;
     using System.ComponentModel;
@@ -8,6 +7,7 @@
     using System.Runtime.CompilerServices;
     using System.Windows;
     using System.Windows.Controls;
+    using Monitor;
 
     public partial class StatusCircleControl : UserControl, INotifyPropertyChanged
     {
@@ -23,8 +23,8 @@
             SourceInternal = EmptySource;
         }
 
-        public IStatusInfoCollection Source 
-        { 
+        public IStatusInfoCollection Source
+        {
             get { return SourceInternal; }
             set
             {
@@ -39,10 +39,11 @@
                 }
             }
         }
+
         private IStatusInfoCollection SourceInternal;
 
         public double Percentage
-        { 
+        {
             get { return Source.ValidPercentage; }
         }
 
@@ -89,9 +90,6 @@
         }
 
         #region Implementation of INotifyPropertyChanged
-        /// <summary>
-        /// Implements the PropertyChanged event.
-        /// </summary>
         public event PropertyChangedEventHandler? PropertyChanged;
 
         internal void NotifyPropertyChanged(string propertyName)

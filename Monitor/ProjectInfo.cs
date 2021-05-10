@@ -1,11 +1,11 @@
 ﻿namespace Monitor
 {
-    using SlnExplorer;
     using System.Collections.Generic;
     using System.ComponentModel;
     using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
     using System.Runtime.CompilerServices;
+    using SlnExplorer;
 
     [DebuggerDisplay("{ProjectName}")]
     public class ProjectInfo : IStatusInfo, INotifyPropertyChanged
@@ -43,9 +43,6 @@
         }
 
         #region Implementation of INotifyPropertyChanged
-        /// <summary>
-        /// Implements the PropertyChanged event.
-        /// </summary>
         public event PropertyChangedEventHandler? PropertyChanged;
 
         internal void NotifyPropertyChanged(string propertyName)

@@ -1,9 +1,9 @@
 ﻿namespace GitHubApi
 {
-    using Octokit;
     using System;
     using System.Diagnostics;
     using System.Threading.Tasks;
+    using Octokit;
 
     public static partial class GitHub
     {
@@ -71,20 +71,25 @@
             try
             {
                 MiscellaneousRateLimit RateLimits = await Client.Miscellaneous.GetRateLimits();
-                RateLimit CoreRateLimit = RateLimits.Resources.Core;
-                RateLimit SearchRateLimit = RateLimits.Resources.Search;
-
-                double CoreRatio = (1.0 * CoreRateLimit.Remaining) / CoreRateLimit.Limit;
-                double SearchRatio = (1.0 * SearchRateLimit.Remaining) / SearchRateLimit.Limit;
-                double RemainingRequests = Math.Min(CoreRatio, SearchRatio);
-
-                return RemainingRequests;
+                return TranslateRateLimits(RateLimits);
             }
             catch (ApiException exception)
             {
                 Debug.WriteLine($"GitHub: {exception.Message}");
                 return 0;
             }
+        }
+
+        private static double TranslateRateLimits(MiscellaneousRateLimit rateLimits)
+        {
+            RateLimit CoreRateLimit = rateLimits.Resources.Core;
+            RateLimit SearchRateLimit = rateLimits.Resources.Search;
+
+            double CoreRatio = (1.0 * CoreRateLimit.Remaining) / CoreRateLimit.Limit;
+            double SearchRatio = (1.0 * SearchRateLimit.Remaining) / SearchRateLimit.Limit;
+            double MinRatio = Math.Min(CoreRatio, SearchRatio);
+
+            return MinRatio;
         }
 
         private static async Task SlowDown()

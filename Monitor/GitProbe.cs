@@ -38,6 +38,12 @@
             await EnumerateSolutions();
         }
 
+        public async Task Restart()
+        {
+            await EnumerateBranches();
+            await EnumerateSolutions();
+        }
+
         public void Stop()
         {
             RepositoryList.Clear();

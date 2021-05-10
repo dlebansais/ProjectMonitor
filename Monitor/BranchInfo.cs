@@ -16,12 +16,8 @@
         public GitHubApi.GitHubBranch Source { get; }
 
         public string Name { get { return Source.Name; } }
-        //public GitReference Commit { get { return Source.Commit; } }
 
         #region Implementation of INotifyPropertyChanged
-        /// <summary>
-        /// Implements the PropertyChanged event.
-        /// </summary>
         public event PropertyChangedEventHandler? PropertyChanged;
 
         internal void NotifyPropertyChanged(string propertyName)

@@ -1,12 +1,12 @@
 ﻿namespace Monitor
 {
-    using RegistryTools;
     using System;
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
     using System.Text;
     using System.Threading.Tasks;
+    using RegistryTools;
 
     public partial class GitProbe
     {
@@ -78,8 +78,13 @@
         {
             foreach (RepositoryInfo Repository in RepositoryList)
             {
+                if (Repository.IsChecked)
+                    continue;
+
                 List<GitHubApi.GitHubBranch> BranchItems = await GitHubApi.GitHub.EnumerateBranches(Repository.Source);
                 NotifyStatusUpdated();
+
+                Repository.BranchList.Clear();
 
                 foreach (GitHubApi.GitHubBranch Item in BranchItems)
                 {
@@ -94,7 +99,28 @@
         public async Task EnumerateSolutions()
         {
             foreach (RepositoryInfo Repository in RepositoryList)
+            {
+                if (Repository.IsChecked)
+                    continue;
+
+                List<SolutionInfo> SolutionToRemoveList = new();
+                foreach (SolutionInfo Item in SolutionList)
+                    if (Item.ParentRepository == Repository)
+                        SolutionToRemoveList.Add(Item);
+
+                List<ProjectInfo> ProjectToRemoveList = new();
+                foreach (ProjectInfo Item in ProjectList)
+                    if (Item.ParentSolution.ParentRepository == Repository)
+                        ProjectToRemoveList.Add(Item);
+
+                foreach (SolutionInfo Item in SolutionToRemoveList)
+                    SolutionList.Remove(Item);
+
+                foreach (ProjectInfo Item in ProjectToRemoveList)
+                    ProjectList.Remove(Item);
+
                 await EnumerateSolutionsInRepository(Repository);
+            }
         }
 
         public async Task EnumerateSolutionsInRepository(RepositoryInfo repository)

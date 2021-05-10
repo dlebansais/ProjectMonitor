@@ -29,6 +29,7 @@
         public bool IsValid { get; private set; }
         public bool IsMainProjectExe { get; set; }
         public List<SolutionInfo> SolutionList { get; } = new();
+        public bool IsChecked { get; set; }
 
         public void CheckMasterBranch()
         {
@@ -51,9 +52,6 @@
         }
 
         #region Implementation of INotifyPropertyChanged
-        /// <summary>
-        /// Implements the PropertyChanged event.
-        /// </summary>
         public event PropertyChangedEventHandler? PropertyChanged;
 
         internal void NotifyPropertyChanged(string propertyName)

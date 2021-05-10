@@ -1,10 +1,10 @@
 ﻿namespace GitHubApi
 {
-    using Octokit;
     using System;
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Threading.Tasks;
+    using Octokit;
 
     public static partial class GitHub
     {
@@ -55,6 +55,11 @@
             }
 
             return Result;
+        }
+
+        public static void ClearCache()
+        {
+            DownloadCache.Clear();
         }
 
         private static Dictionary<string, Dictionary<string, byte[]>> DownloadCache = new();

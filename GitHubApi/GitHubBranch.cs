@@ -14,6 +14,5 @@
         internal Branch Source { get; }
 
         public string Name { get { return Source.Name; } }
-        //public GitReference Commit { get { return Source.Commit; } }
     }
 }
