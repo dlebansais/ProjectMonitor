@@ -68,7 +68,7 @@
                 if (!Item.IsChecked)
                 {
                     await ValidateRepository(Item);
-                    Item.IsChecked = true;
+                    Item.SetChecked();
                     HasRepositoryOrSolutionChecked = true;
                 }
 
@@ -76,7 +76,7 @@
                 if (!Item.IsChecked)
                 {
                     await ValidateSolution(Item);
-                    Item.IsChecked = true;
+                    Item.SetChecked();
                     HasRepositoryOrSolutionChecked = true;
                 }
 
@@ -91,7 +91,7 @@
             GitHubApi.GitHub.SubscribeToActivity();
         }
 
-        public async Task ValidateRepository(RepositoryInfo repository)
+        private async Task ValidateRepository(RepositoryInfo repository)
         {
             if (repository.SolutionList.Count == 0)
                 return;
@@ -117,7 +117,7 @@
             }
         }
 
-        public async Task CheckMandatoryIgnoreLine(RepositoryInfo repository)
+        private async Task CheckMandatoryIgnoreLine(RepositoryInfo repository)
         {
             byte[]? Content = await GitHubApi.GitHub.DownloadFile(repository.Source, "/.gitignore");
 
@@ -158,7 +158,7 @@
             }
         }
 
-        public async Task ValidateSolution(SolutionInfo solution)
+        private async Task ValidateSolution(SolutionInfo solution)
         {
             if (GitProbe.IsKnownAsValid(solution.ParentRepository))
                 return;
@@ -193,17 +193,17 @@
             }
         }
 
-        public async Task<bool> ValidateMandatoryFile(RepositoryInfo repository, string path, RepositoryFile mandatoryFile)
+        private async Task<bool> ValidateMandatoryFile(RepositoryInfo repository, string path, RepositoryFile mandatoryFile)
         {
             return await ValidateContent(repository, path, mandatoryFile.FileName, mandatoryFile.Content, isMandatory: true);
         }
 
-        public async Task<bool> ValidateForbiddenFile(RepositoryInfo repository, string path, RepositoryFile mandatoryFile)
+        private async Task<bool> ValidateForbiddenFile(RepositoryInfo repository, string path, RepositoryFile mandatoryFile)
         {
             return await ValidateContent(repository, path, mandatoryFile.FileName, mandatoryFile.Content, isMandatory: false);
         }
 
-        public async Task<bool> ValidateContent(RepositoryInfo repository, string rootPath, string fileName, byte[] mandatoryContent, bool isMandatory)
+        private async Task<bool> ValidateContent(RepositoryInfo repository, string rootPath, string fileName, byte[] mandatoryContent, bool isMandatory)
         {
             byte[]? Content = await GitHubApi.GitHub.DownloadFile(repository.Source, $"{rootPath}{fileName}");
 
@@ -232,7 +232,7 @@
                 return true;
         }
 
-        public bool ValidateMandatoryDependentProject(SolutionInfo solution, DependentProject mandatoryDependentProject)
+        private bool ValidateMandatoryDependentProject(SolutionInfo solution, DependentProject mandatoryDependentProject)
         {
             string MandatoryProjectName = mandatoryDependentProject.ProjectName;
 
@@ -264,7 +264,7 @@
             return IsDependent;
         }
 
-        public async Task<bool> ValidateMandatoryContinuousIntegration(RepositoryInfo repository, ContinuousIntegration mandatoryContinuousIntegration)
+        private async Task<bool> ValidateMandatoryContinuousIntegration(RepositoryInfo repository, ContinuousIntegration mandatoryContinuousIntegration)
         {
             string ErrorText;
             byte[]? Content = await GitHubApi.GitHub.DownloadFile(repository.Source, "/appveyor.yml");
@@ -285,7 +285,7 @@
                 return true;
         }
 
-        public void ValidateProjectQuality(ProjectInfo project)
+        private void ValidateProjectQuality(ProjectInfo project)
         {
             if (project.SdkType == SlnExplorer.SdkType.Unknown && project.ProjectType == SlnExplorer.ProjectType.KnownToBeMSBuildFormat)
                 return;
@@ -336,7 +336,7 @@
             }
         }
 
-        public void ValidatePackageReferenceVersions()
+        private void ValidatePackageReferenceVersions()
         {
             Dictionary<string, List<string>> PackageReferenceTable = new();
 
@@ -432,7 +432,7 @@
                 else
                 {
                     string ErrorText = $"Project {project.ProjectName} has package {ShortName}-Debug but no release version";
-                    ErrorList.Add(new RepositoryError(project.ParentSolution.ParentRepository, ErrorText));
+                    AddErrorIfNewOnly(project.ParentSolution.ParentRepository, ErrorText);
                     project.Invalidate();
                 }
             }
@@ -449,7 +449,7 @@
                     if ((Name == ShortName && Condition != "'$(Configuration)|$(Platform)'!='Debug|x64'") || (Name == ShortNameDebug && Condition != "'$(Configuration)|$(Platform)'=='Debug|x64'"))
                     {
                         string ErrorText = $"Project {project.ProjectName} use package {Name} but with wrong condition {Condition}";
-                        ErrorList.Add(new RepositoryError(project.ParentSolution.ParentRepository, ErrorText));
+                        AddErrorIfNewOnly(project.ParentSolution.ParentRepository, ErrorText);
                         project.Invalidate();
                     }
                 }
@@ -499,6 +499,15 @@
                     GitProbe.TagValidRepository(Repository);
         }
 
+        private void AddErrorIfNewOnly(RepositoryInfo repository, string errorText)
+        {
+            foreach (MonitorError Error in ErrorList)
+                if (Error is RepositoryError AsRepositoryError && AsRepositoryError.Repository == repository && AsRepositoryError.ErrorText == errorText)
+                    return;
+
+            ErrorList.Add(new RepositoryError(repository, errorText));
+        }
+
         private void OnActivityReported(object sender, GitHubApi.ActivityReportedEventArgs args)
         {
             List<long> RepositoryIdList = args.ModifiedRepositoryIdList;
@@ -541,7 +550,7 @@
                 foreach (RepositoryInfo Repository in GitProbe.RepositoryList)
                     if (Repository.Id == Id)
                     {
-                        Repository.IsChecked = false;
+                        Repository.ResetChecked();
                         break;
                     }
             }

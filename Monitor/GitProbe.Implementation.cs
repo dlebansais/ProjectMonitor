@@ -85,6 +85,7 @@
                 NotifyStatusUpdated();
 
                 Repository.BranchList.Clear();
+                Repository.SolutionList.Clear();
 
                 foreach (GitHubApi.GitHubBranch Item in BranchItems)
                 {

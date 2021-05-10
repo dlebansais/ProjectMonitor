@@ -125,6 +125,10 @@
                 await GitProbe.Restart();
                 if (IsConnected)
                     await Validation.Validate();
+
+                RepositoryList.NotifyValidCountChanged();
+                SolutionList.NotifyValidCountChanged();
+                ProjectList.NotifyValidCountChanged();
             }
         }
 

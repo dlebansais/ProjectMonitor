@@ -29,7 +29,7 @@
         public bool IsValid { get; private set; }
         public bool IsMainProjectExe { get; set; }
         public List<SolutionInfo> SolutionList { get; } = new();
-        public bool IsChecked { get; set; }
+        public bool IsChecked { get; private set; }
 
         public void CheckMasterBranch()
         {
@@ -43,6 +43,17 @@
                 NotifyPropertyChanged(nameof(MasterCommit));
                 NotifyPropertyChanged(nameof(MasterCommitSha));
             }
+        }
+
+        public void ResetChecked()
+        {
+            IsChecked = false;
+            IsValid = true;
+        }
+
+        public void SetChecked()
+        {
+            IsChecked = true;
         }
 
         public void Invalidate()

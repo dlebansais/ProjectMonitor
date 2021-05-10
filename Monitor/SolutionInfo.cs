@@ -41,7 +41,18 @@
         public List<ProjectInfo> ProjectList { get; }
         public bool IsValid { get; private set; }
         public string Name { get { return Source.Name; } }
-        public bool IsChecked { get; set; }
+        public bool IsChecked { get; private set; }
+
+        public void ResetChecked()
+        {
+            IsChecked = false;
+            IsValid = true;
+        }
+
+        public void SetChecked()
+        {
+            IsChecked = true;
+        }
 
         public void Invalidate()
         {
