@@ -5,8 +5,16 @@
     using System.Net.Http;
     using System.Threading.Tasks;
 
+    /// <summary>
+    /// Tool to download files from the Internet.
+    /// </summary>
     internal class HttpHelper
     {
+        /// <summary>
+        /// Downloads a file.
+        /// </summary>
+        /// <param name="url">The file URL.</param>
+        /// <returns>A stream with the file content; null if an error occurred.</returns>
         public static async Task<Stream?> Download(string url)
         {
             HttpClient Request = new HttpClient();

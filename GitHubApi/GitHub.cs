@@ -5,16 +5,37 @@
     using System.Threading.Tasks;
     using Octokit;
 
+    /// <summary>
+    /// A simple class to enumerate repositories with .NET Sdk projects.
+    /// </summary>
     public static partial class GitHub
     {
+        /// <summary>
+        /// The threshold of acceptable remaining number of requests.
+        /// </summary>
         public const double RemainingRequestsThreshold = 0.8;
+
+        /// <summary>
+        /// The time between requests when slowing down below the threshold.
+        /// </summary>
         public static readonly TimeSpan SlowdownTime = TimeSpan.FromSeconds(5);
 
+        /// <summary>
+        /// Gets a value indicating whether the connection with github.com is established.
+        /// </summary>
         public static bool IsConnected { get; private set; }
+
+        /// <summary>
+        /// Gets the ratio of remaining requests.
+        /// </summary>
         public static double RemainingRequests { get; private set; }
+
+        /// <summary>
+        /// Gets a value indicating whether requests are slowed down.
+        /// </summary>
         public static bool IsSlowingDown { get; private set; }
 
-        public static async Task<bool> Connect()
+        private static async Task<bool> Connect()
         {
             if (IsConnected)
             {

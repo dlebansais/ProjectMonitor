@@ -6,8 +6,18 @@
     using System.Threading.Tasks;
     using Octokit;
 
+    /// <summary>
+    /// A simple class to enumerate repositories with .NET Sdk projects.
+    /// </summary>
     public static partial class GitHub
     {
+        /// <summary>
+        /// Enumerate files in a repository.
+        /// </summary>
+        /// <param name="repository">The repository.</param>
+        /// <param name="path">The path where to start looking.</param>
+        /// <param name="searchPattern">The search pattern.</param>
+        /// <returns>A table of file names and associated stream content.</returns>
         public static async Task<Dictionary<string, Stream?>> EnumerateFiles(GitHubRepository repository, string path, string searchPattern)
         {
             Dictionary<string, Stream?> Result = new();

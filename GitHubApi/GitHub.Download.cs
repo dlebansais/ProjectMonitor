@@ -6,8 +6,19 @@
     using System.Threading.Tasks;
     using Octokit;
 
+    /// <summary>
+    /// A simple class to enumerate repositories with .NET Sdk projects.
+    /// </summary>
     public static partial class GitHub
     {
+        /// <summary>
+        /// Downloads a file from a repository.
+        /// Any subsequent attempt to download the same file just return content from the local cache.
+        /// See <see cref="ClearCache"/>.
+        /// </summary>
+        /// <param name="repository">The repository.</param>
+        /// <param name="filePath">The file path from the root of the repository.</param>
+        /// <returns>The file content, null if an error occurred.</returns>
         public static async Task<byte[]?> DownloadFile(GitHubRepository repository, string filePath)
         {
             byte[]? Result = null;
@@ -57,6 +68,9 @@
             return Result;
         }
 
+        /// <summary>
+        /// Clears the file cache.
+        /// </summary>
         public static void ClearCache()
         {
             DownloadCache.Clear();

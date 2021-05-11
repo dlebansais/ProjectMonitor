@@ -4,8 +4,16 @@
     using System.Threading.Tasks;
     using Octokit;
 
+    /// <summary>
+    /// A simple class to enumerate repositories with .NET Sdk projects.
+    /// </summary>
     public static partial class GitHub
     {
+        /// <summary>
+        /// Enumerates branches of a repository.
+        /// </summary>
+        /// <param name="repository">The repository.</param>
+        /// <returns>A list of branches.</returns>
         public static async Task<List<GitHubBranch>> EnumerateBranches(GitHubRepository repository)
         {
             List<GitHubBranch> Result = new();
