@@ -82,8 +82,9 @@
 
             if (HasRepositoryOrSolutionChecked)
             {
+                List<string> ShortNameList = GetPackageShortNameList();
                 ValidatePackageReferenceVersions();
-                ValidatePackageReferenceConditions();
+                ValidatePackageReferenceConditions(ShortNameList);
             }
 
             TagValidRepositories();
@@ -395,43 +396,40 @@
                 }
         }
 
-        public void ValidatePackageReferenceConditions()
+        public void ValidatePackageReferenceConditions(List<string> shortNameList)
         {
             foreach (ProjectInfo Project in GitProbe.ProjectList)
-                ValidatePackageReferenceConditions(Project);
+                ValidatePackageReferenceConditions(Project, shortNameList);
         }
 
-        public void ValidatePackageReferenceConditions(ProjectInfo project)
+        public void ValidatePackageReferenceConditions(ProjectInfo project, List<string> shortNameList)
         {
-            List<string> ShortNameList = new();
-
-            foreach (SlnExplorer.PackageReference PackageReference in project.PackageReferenceList)
-            {
-                string Name = PackageReference.Name;
-                if (!Name.EndsWith("-Debug"))
-                    continue;
-
-                string ShortName = Name.Substring(0, Name.Length - 6);
-                ShortNameList.Add(ShortName);
-            }
-
             List<string> ValidPackageList = new();
 
-            foreach (string ShortName in ShortNameList)
+            foreach (string ShortName in shortNameList)
             {
                 bool HasMainPackage = false;
-                foreach (SlnExplorer.PackageReference PackageReference in project.PackageReferenceList)
-                    if (PackageReference.Name == ShortName)
-                    {
-                        HasMainPackage = true;
-                        break;
-                    }
+                bool HasDebugPackage = false;
 
-                if (HasMainPackage)
-                    ValidPackageList.Add(ShortName);
-                else
+                foreach (SlnExplorer.PackageReference PackageReference in project.PackageReferenceList)
                 {
-                    string ErrorText = $"Project {project.ProjectName} has package {ShortName}-Debug but no release version";
+                    if (PackageReference.Name == ShortName)
+                        HasMainPackage = true;
+                    if (PackageReference.Name == $"{ShortName}-Debug")
+                        HasDebugPackage = true;
+                }
+
+                if (HasMainPackage && HasDebugPackage)
+                    ValidPackageList.Add(ShortName);
+                else if (HasMainPackage || HasDebugPackage)
+                {
+                    string ErrorText;
+
+                    if (HasMainPackage)
+                        ErrorText = $"Project {project.ProjectName} has package {ShortName}-Debug but no release version";
+                    else
+                        ErrorText = $"Project {project.ProjectName} has package {ShortName} but no debug version";
+
                     AddErrorIfNewOnly(project.ParentSolution.ParentRepository, ErrorText);
                     project.Invalidate();
                 }
@@ -454,6 +452,26 @@
                     }
                 }
             }
+        }
+
+        public List<string> GetPackageShortNameList()
+        {
+            List<string> ShortNameList = new();
+
+            foreach (ProjectInfo Project in GitProbe.ProjectList)
+            {
+                foreach (SlnExplorer.PackageReference PackageReference in Project.PackageReferenceList)
+                {
+                    string Name = PackageReference.Name;
+                    if (!Name.EndsWith("-Debug"))
+                        continue;
+
+                    string ShortName = Name.Substring(0, Name.Length - 6);
+                    ShortNameList.Add(ShortName);
+                }
+            }
+
+            return ShortNameList;
         }
 
         private static bool IsContentEqual(byte[] content1, byte[] content2)
