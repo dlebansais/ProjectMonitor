@@ -407,50 +407,56 @@
             List<string> ValidPackageList = new();
 
             foreach (string ShortName in shortNameList)
+                ValidatePackageDebugReleaseConditions(project, ShortName, ValidPackageList);
+
+            foreach (string ShortName in ValidPackageList)
+                ValidatePackageValidConditions(project, ShortName);
+        }
+
+        private void ValidatePackageValidConditions(ProjectInfo project, string shortName)
+        {
+            string ShortNameDebug = $"{shortName}-Debug";
+
+            foreach (SlnExplorer.PackageReference PackageReference in project.PackageReferenceList)
             {
-                bool HasMainPackage = false;
-                bool HasDebugPackage = false;
+                string Name = PackageReference.Name;
+                string Condition = PackageReference.Condition;
 
-                foreach (SlnExplorer.PackageReference PackageReference in project.PackageReferenceList)
+                if ((Name == shortName && Condition != "'$(Configuration)|$(Platform)'!='Debug|x64'") || (Name == ShortNameDebug && Condition != "'$(Configuration)|$(Platform)'=='Debug|x64'"))
                 {
-                    if (PackageReference.Name == ShortName)
-                        HasMainPackage = true;
-                    if (PackageReference.Name == $"{ShortName}-Debug")
-                        HasDebugPackage = true;
-                }
-
-                if (HasMainPackage && HasDebugPackage)
-                    ValidPackageList.Add(ShortName);
-                else if (HasMainPackage || HasDebugPackage)
-                {
-                    string ErrorText;
-
-                    if (HasMainPackage)
-                        ErrorText = $"Project {project.ProjectName} has package {ShortName}-Debug but no release version";
-                    else
-                        ErrorText = $"Project {project.ProjectName} has package {ShortName} but no debug version";
-
+                    string ErrorText = $"Project {project.ProjectName} use package {Name} but with wrong condition {Condition}";
                     AddErrorIfNewOnly(project.ParentSolution.ParentRepository, ErrorText);
                     project.Invalidate();
                 }
             }
+        }
 
-            foreach (string ShortName in ValidPackageList)
+        private void ValidatePackageDebugReleaseConditions(ProjectInfo project, string shortName, List<string> validPackageList)
+        {
+            bool HasMainPackage = false;
+            bool HasDebugPackage = false;
+
+            foreach (SlnExplorer.PackageReference PackageReference in project.PackageReferenceList)
             {
-                string ShortNameDebug = $"{ShortName}-Debug";
+                if (PackageReference.Name == shortName)
+                    HasMainPackage = true;
+                if (PackageReference.Name == $"{shortName}-Debug")
+                    HasDebugPackage = true;
+            }
 
-                foreach (SlnExplorer.PackageReference PackageReference in project.PackageReferenceList)
-                {
-                    string Name = PackageReference.Name;
-                    string Condition = PackageReference.Condition;
+            if (HasMainPackage && HasDebugPackage)
+                validPackageList.Add(shortName);
+            else if (HasMainPackage || HasDebugPackage)
+            {
+                string ErrorText;
 
-                    if ((Name == ShortName && Condition != "'$(Configuration)|$(Platform)'!='Debug|x64'") || (Name == ShortNameDebug && Condition != "'$(Configuration)|$(Platform)'=='Debug|x64'"))
-                    {
-                        string ErrorText = $"Project {project.ProjectName} use package {Name} but with wrong condition {Condition}";
-                        AddErrorIfNewOnly(project.ParentSolution.ParentRepository, ErrorText);
-                        project.Invalidate();
-                    }
-                }
+                if (HasMainPackage)
+                    ErrorText = $"Project {project.ProjectName} has package {shortName}-Debug but no release version";
+                else
+                    ErrorText = $"Project {project.ProjectName} has package {shortName} but no debug version";
+
+                AddErrorIfNewOnly(project.ParentSolution.ParentRepository, ErrorText);
+                project.Invalidate();
             }
         }
 
